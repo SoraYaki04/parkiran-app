@@ -1,0 +1,68 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom styles */
+@layer components {
+    .form-input-custom {
+        @apply block w-full rounded-lg border-gray-300 dark:border-gray-700 
+               bg-transparent text-gray-900 dark:text-white 
+               placeholder:text-gray-400 dark:placeholder:text-gray-500 
+               focus:border-primary focus:ring-1 focus:ring-primary 
+               sm:text-sm sm:leading-6 h-11 px-3;
+    }
+    
+    .btn-primary-custom {
+        @apply flex w-full justify-center items-center rounded-lg 
+               bg-primary px-3 py-3 text-sm font-semibold leading-6 
+               text-black shadow-sm hover:bg-primary-400 
+               focus-visible:outline focus-visible:outline-2 
+               focus-visible:outline-offset-2 focus-visible:outline-primary 
+               transition-colors duration-200;
+    }
+    
+    .card-dark {
+        @apply bg-white dark:bg-gray-900 rounded-xl shadow-2xl 
+               border border-gray-200 dark:border-gray-800;
+    }
+
+
+    
+        /* Password input group */
+    .password-input-group {
+        @apply relative;
+    }
+
+    .password-toggle-btn {
+        @apply absolute inset-y-0 right-0 flex items-center pr-3 
+            cursor-pointer text-gray-400 hover:text-gray-600 
+            dark:hover:text-gray-300 transition-colors;
+    }
+
+    /* Information box */
+    .info-box {
+        @apply p-4 rounded-lg border;
+    }
+
+    .info-box.blue {
+        @apply bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 
+            text-blue-800 dark:text-blue-300;
+    }
+
+    .info-box.yellow {
+        @apply bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800 
+            text-yellow-800 dark:text-yellow-300;
+    }
+
+    /* Register specific */
+    .register-card {
+        @apply w-full max-w-[440px] bg-white dark:bg-gray-900 rounded-xl 
+            shadow-2xl border border-gray-200 dark:border-gray-800 
+            p-8 sm:p-10 flex flex-col gap-8;
+    }
+
+    .register-header-icon {
+        @apply h-16 w-16 rounded-full bg-yellow-100 dark:bg-yellow-900/30 
+            flex items-center justify-center text-yellow-600 dark:text-yellow-400 mb-2;
+    }
+}

@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -12,33 +11,124 @@ class User extends Authenticatable
 {
     use HasApiTokens, HasFactory, Notifiable;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var array<int, string>
-     */
     protected $fillable = [
         'name',
-        'email',
+        'username',
         'password',
+        'role_id',
+        'status',
     ];
 
-    /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var array<int, string>
-     */
     protected $hidden = [
         'password',
         'remember_token',
     ];
 
+    protected function casts(): array
+    {
+        return [
+            'password' => 'hashed',
+        ];
+    }
+
+    // ===== RELASI =====
+    
     /**
-     * The attributes that should be cast.
-     *
-     * @var array<string, string>
+     * Relasi ke Role
      */
-    protected $casts = [
-        'email_verified_at' => 'datetime',
-    ];
+    public function role()
+    {
+        return $this->belongsTo(Role::class);
+    }
+
+    // ===== HELPER METHODS =====
+    
+    /**
+     * Get role name
+     */
+    public function getRoleNameAttribute(): string
+    {
+        return $this->role ? $this->role->name : 'petugas';
+    }
+
+    /**
+     * Check if user is admin
+     */
+    public function isAdmin(): bool
+    {
+        return $this->role_id === 1;
+    }
+
+    /**
+     * Check if user is petugas
+     */
+    public function isPetugas(): bool
+    {
+        return $this->role_id === 2;
+    }
+
+    /**
+     * Check if user is owner
+     */
+    public function isOwner(): bool
+    {
+        return $this->role_id === 3;
+    }
+
+    /**
+     * Check if user is active
+     * NOTE: Status di database Anda 'aktif' bukan 'active'
+     */
+    public function isActive(): bool
+    {
+        return $this->status === 'aktif'; // Sesuai dengan database Anda
+    }
+
+    /**
+     * Determine if the user's password has been confirmed recently.
+     */
+    public function isPasswordConfirmed(): bool
+    {
+        $confirmedAt = session('auth.password_confirmed_at');
+        
+        if (!$confirmedAt) {
+            return false;
+        }
+
+        return (time() - $confirmedAt) < 10800; // 3 jam
+    }
+
+    // ===== SCOPES =====
+    
+    /**
+     * Scope for active users
+     */
+    public function scopeActive($query)
+    {
+        return $query->where('status', 'aktif');
+    }
+
+    /**
+     * Scope for admins
+     */
+    public function scopeAdmins($query)
+    {
+        return $query->where('role_id', 1);
+    }
+
+    /**
+     * Scope for petugas
+     */
+    public function scopePetugas($query)
+    {
+        return $query->where('role_id', 2);
+    }
+
+    /**
+     * Scope for owners
+     */
+    public function scopeOwners($query)
+    {
+        return $query->where('role_id', 3);
+    }
 }
