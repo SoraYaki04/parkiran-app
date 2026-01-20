@@ -41,17 +41,6 @@ Saat ini proyek masih **dalam tahap pengembangan aktif**.
 
 ---
 
-## 🔮 Rencana Pengembangan Selanjutnya
-- Login member menggunakan QR Code
-- Scan QR Code untuk akses parkir
-- Laporan pendapatan parkir
-- Monitoring ketersediaan slot parkir
-- Log aktivitas pengguna
-- Tampilan dark mode
-- Optimasi performa dan keamanan
-
----
-
 ## 🛠️ Teknologi yang Digunakan
 - **Laravel**
 - **Livewire / Volt**
@@ -59,19 +48,3 @@ Saat ini proyek masih **dalam tahap pengembangan aktif**.
 - **MySQL**
 - **PHP**
 
----
-
-## 📂 Status Proyek
-🚧 **Work In Progress**  
-Proyek ini masih dalam tahap pengembangan dan belum siap untuk digunakan di lingkungan produksi.  
-Struktur dan fitur dapat berubah sewaktu-waktu.
-
----
-
-## 👤 Developer
-Dikembangkan oleh **Sora Yaki**
-
----
-
-## 📄 Lisensi
-Proyek ini dibuat untuk keperluan pembelajaran dan pengembangan sistem.
