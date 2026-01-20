@@ -65,4 +65,7 @@
         @apply h-16 w-16 rounded-full bg-yellow-100 dark:bg-yellow-900/30 
             flex items-center justify-center text-yellow-600 dark:text-yellow-400 mb-2;
     }
+
+
+
 }
