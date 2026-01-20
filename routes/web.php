@@ -59,34 +59,30 @@ Route::middleware('auth')->group(function () {
         // ? Manajemen Area
         Volt::route('area', 'pages.admin.area.index')
             ->name('area.index');
-        Volt::route('area/create', 'pages.admin.area.create')
-            ->name('area.create');
-        Volt::route('area/{area}/edit', 'pages.admin.area.edit')
-            ->name('area.edit');
+        // Volt::route('area/create', 'pages.admin.area.create')
+        //     ->name('area.create');
+        // Volt::route('area/{area}/edit', 'pages.admin.area.edit')
+        //     ->name('area.edit');
 
         // ? Manajemen Kendaraan
         Volt::route('kendaraan', 'pages.admin.kendaraan.index')
             ->name('kendaraan.index');
-        Volt::route('kendaraan/create', 'pages.admin.kendaraan.create')
-            ->name('area.create');
-        Volt::route('kendaraan/{kendaraan}/edit', 'pages.admin.kendaraan.edit')
-            ->name('kendaraan.edit');
+        // Volt::route('kendaraan/create', 'pages.admin.kendaraan.create')
+        //     ->name('area.create');
+        // Volt::route('kendaraan/{kendaraan}/edit', 'pages.admin.kendaraan.edit')
+        //     ->name('kendaraan.edit');
 
         // ? Manajemen Tarif
         Volt::route('tarif', 'pages.admin.tarif.index')
             ->name('tarif.index');
-        Volt::route('tarif/create', 'pages.admin.tarif.create')
-            ->name('area.create');
-        Volt::route('tarif/{tarif}/edit', 'pages.admin.tarif.edit')
-            ->name('tarif.edit');
+        // Volt::route('tarif/create', 'pages.admin.tarif.create')
+        //     ->name('area.create');
+        // Volt::route('tarif/{tarif}/edit', 'pages.admin.tarif.edit')
+        //     ->name('tarif.edit');
         
         //  ? Manajemen User
         Volt::route('users', 'pages.admin.users.index')
             ->name('users.index');
-        Volt::route('users/create', 'pages.admin.users.create')
-            ->name('users.create');
-        Volt::route('users/{user}/edit', 'pages.admin.users.edit')
-            ->name('users.edit');
         
         // ? Laporan dan Statistik
         Volt::route('reports', 'pages.admin.reports')
