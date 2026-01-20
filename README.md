@@ -25,7 +25,6 @@ Saat ini proyek masih **dalam tahap pengembangan aktif**.
 - Mempermudah manajemen kendaraan masuk & keluar
 - Mengurangi human error
 - Menyediakan laporan parkir yang terstruktur
-- Mempersiapkan integrasi sistem berbasis QR Code
 
 ---
 
