@@ -1,201 +1,187 @@
 <?php
 
+use Livewire\Volt\Component;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
-use Livewire\Volt\Component;
 
 new #[Layout('layouts.app')] #[Title('Dashboard')] class extends Component {
-    // Anda bisa tambahkan properties dan methods di sini
-    // Contoh: public $stats = [];
-    
-    // Mount method jika perlu
-    public function mount(): void
+
+    public function getIsAdminProperty()
     {
-        // Inisialisasi data
+        return auth()->user()->role_id === 1;
     }
-    
-    // Contoh method
-    public function refreshStats(): void
-    {
-        // Refresh data
-    }
-}; ?>
 
-<div>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
-            {{ __('Dashboard Sistem Parkir') }}
-        </h2>
-    </x-slot>
+};
+?>
 
-    <div class="py-12">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-            <!-- Stats Cards -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                <!-- Kendaraan Masuk -->
-                <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm rounded-lg">
-                    <div class="p-6">
-                        <div class="flex items-center">
-                            <div class="flex-shrink-0 bg-blue-500 rounded-md p-3">
-                                <span class="material-symbols-outlined text-white">directions_car</span>
-                            </div>
-                            <div class="ml-5 w-0 flex-1">
-                                <dl>
-                                    <dt class="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">
-                                        Kendaraan Masuk
-                                    </dt>
-                                    <dd class="text-lg font-semibold text-gray-900 dark:text-white">
-                                        24
-                                    </dd>
-                                </dl>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+<div class="flex-1 flex flex-col h-full overflow-hidden bg-background-dark">
 
-                <!-- Kendaraan Keluar -->
-                <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm rounded-lg">
-                    <div class="p-6">
-                        <div class="flex items-center">
-                            <div class="flex-shrink-0 bg-green-500 rounded-md p-3">
-                                <span class="material-symbols-outlined text-white">exit_to_app</span>
-                            </div>
-                            <div class="ml-5 w-0 flex-1">
-                                <dl>
-                                    <dt class="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">
-                                        Kendaraan Keluar
-                                    </dt>
-                                    <dd class="text-lg font-semibold text-gray-900 dark:text-white">
-                                        18
-                                    </dd>
-                                </dl>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Pendapatan -->
-                <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm rounded-lg">
-                    <div class="p-6">
-                        <div class="flex items-center">
-                            <div class="flex-shrink-0 bg-yellow-500 rounded-md p-3">
-                                <span class="material-symbols-outlined text-white">payments</span>
-                            </div>
-                            <div class="ml-5 w-0 flex-1">
-                                <dl>
-                                    <dt class="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">
-                                        Pendapatan Hari Ini
-                                    </dt>
-                                    <dd class="text-lg font-semibold text-gray-900 dark:text-white">
-                                        Rp 450.000
-                                    </dd>
-                                </dl>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- User Info & Actions -->
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <!-- User Info Card -->
-                <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm rounded-lg">
-                    <div class="p-6">
-                        <h3 class="text-lg font-semibold mb-4 text-gray-900 dark:text-white">
-                            Informasi Akun
-                        </h3>
-                        
-                        <div class="space-y-4">
-                            <div class="flex items-center">
-                                <span class="material-symbols-outlined text-gray-400 mr-3">person</span>
-                                <div>
-                                    <p class="text-sm text-gray-500 dark:text-gray-400">Nama</p>
-                                    <p class="font-medium text-gray-900 dark:text-white">{{ auth()->user()->name }}</p>
-                                </div>
-                            </div>
-                            
-                            <div class="flex items-center">
-                                <span class="material-symbols-outlined text-gray-400 mr-3">badge</span>
-                                <div>
-                                    <p class="text-sm text-gray-500 dark:text-gray-400">Username</p>
-                                    <p class="font-medium text-gray-900 dark:text-white">{{ auth()->user()->username }}</p>
-                                </div>
-                            </div>
-                            
-                            <div class="flex items-center">
-                                <span class="material-symbols-outlined text-gray-400 mr-3">admin_panel_settings</span>
-                                <div>
-                                    <p class="text-sm text-gray-500 dark:text-gray-400">Role</p>
-                                    <p class="font-medium">
-                                        @if(auth()->user()->role_id == 1)
-                                            <span class="px-3 py-1 bg-red-100 text-red-800 rounded-full text-sm">Admin</span>
-                                        @elseif(auth()->user()->role_id == 2)
-                                            <span class="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">Petugas</span>
-                                        @else
-                                            <span class="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm">Owner</span>
-                                        @endif
-                                    </p>
-                                </div>
-                            </div>
-                            
-                            <div class="flex items-center">
-                                <span class="material-symbols-outlined text-gray-400 mr-3">check_circle</span>
-                                <div>
-                                    <p class="text-sm text-gray-500 dark:text-gray-400">Status</p>
-                                    <p class="font-medium">
-                                        @if(auth()->user()->status == 'aktif')
-                                            <span class="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm">Aktif</span>
-                                        @else
-                                            <span class="px-3 py-1 bg-red-100 text-red-800 rounded-full text-sm">Tidak Aktif</span>
-                                        @endif
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Quick Actions Card -->
-                <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm rounded-lg">
-                    <div class="p-6">
-                        <h3 class="text-lg font-semibold mb-4 text-gray-900 dark:text-white">
-                            Aksi Cepat
-                        </h3>
-                        
-                        <div class="space-y-3">
-                            @if(auth()->user()->role_id == 1)
-                                <!-- Admin Actions -->
-                                <a href="#" class="flex items-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
-                                    <span class="material-symbols-outlined text-blue-500 mr-3">group</span>
-                                    <span class="font-medium">Kelola Petugas</span>
-                                </a>
-                                <a href="#" class="flex items-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
-                                    <span class="material-symbols-outlined text-green-500 mr-3">summarize</span>
-                                    <span class="font-medium">Laporan Harian</span>
-                                </a>
-                                <a href="#" class="flex items-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
-                                    <span class="material-symbols-outlined text-purple-500 mr-3">settings</span>
-                                    <span class="font-medium">Pengaturan Sistem</span>
-                                </a>
-                            @else
-                                <!-- Petugas/Owner Actions -->
-                                <a href="#" class="flex items-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
-                                    <span class="material-symbols-outlined text-blue-500 mr-3">add_circle</span>
-                                    <span class="font-medium">Tambah Kendaraan Masuk</span>
-                                </a>
-                                <a href="#" class="flex items-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
-                                    <span class="material-symbols-outlined text-green-500 mr-3">logout</span>
-                                    <span class="font-medium">Proses Kendaraan Keluar</span>
-                                </a>
-                                <a href="#" class="flex items-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
-                                    <span class="material-symbols-outlined text-yellow-500 mr-3">history</span>
-                                    <span class="font-medium">Riwayat Parkir</span>
-                                </a>
-                            @endif
-                        </div>
-                    </div>
-                </div>
-            </div>
+    {{-- HEADER DASHBOARD --}}
+    <header class="h-20 px-8 flex items-center justify-between border-b border-gray-800 bg-background-dark/95 backdrop-blur z-10">
+        <div>
+            <h2 class="text-2xl font-bold text-white tracking-tight">
+                Dashboard Overview
+            </h2>
+            <p class="text-text-muted text-sm">
+                Welcome back, {{ auth()->user()->name }}
+            </p>
         </div>
+    </header>
+
+    {{-- CONTENT --}}
+    <div class="flex-1 overflow-y-auto p-8 custom-scrollbar">
+
+        @if($this->isAdmin)
+
+            {{-- ===== ADMIN DASHBOARD ===== --}}
+
+            {{-- STATS GRID --}}
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+
+                {{-- Cars --}}
+                <div class="bg-card-dark p-6 rounded-xl border border-gray-700 hover:border-primary/50 transition">
+                    <div class="flex justify-between items-start mb-4">
+                        <div class="p-2.5 bg-blue-500/10 rounded-lg text-blue-400">
+                            <span class="material-symbols-outlined">directions_car</span>
+                        </div>
+                        <span class="text-xs bg-gray-700 text-gray-300 px-2 py-1 rounded">
+                            Level 1–3
+                        </span>
+                    </div>
+
+                    <p class="text-text-muted text-sm">Mobil</p>
+                    <h3 class="text-2xl font-bold text-white mt-1">
+                        45 <span class="text-gray-500 font-normal">/100</span>
+                    </h3>
+
+                    <div class="w-full bg-gray-700 rounded-full h-2 mt-4">
+                        <div class="bg-primary h-2 rounded-full" style="width:45%"></div>
+                    </div>
+
+                    <p class="text-xs text-gray-500 mt-2">55 spots available</p>
+                </div>
+
+                {{-- Motors --}}
+                <div class="bg-card-dark p-6 rounded-xl border border-gray-700 hover:border-primary/50 transition">
+                    <div class="flex justify-between items-start mb-4">
+                        <div class="p-2.5 bg-orange-500/10 rounded-lg text-orange-400">
+                            <span class="material-symbols-outlined">two_wheeler</span>
+                        </div>
+                        <span class="text-xs bg-gray-700 text-gray-300 px-2 py-1 rounded">
+                            Level G
+                        </span>
+                    </div>
+
+                    <p class="text-text-muted text-sm">Motor</p>
+                    <h3 class="text-2xl font-bold text-white mt-1">
+                        12 <span class="text-gray-500 font-normal">/50</span>
+                    </h3>
+
+                    <div class="w-full bg-gray-700 rounded-full h-2 mt-4">
+                        <div class="bg-primary h-2 rounded-full" style="width:24%"></div>
+                    </div>
+
+                    <p class="text-xs text-gray-500 mt-2">38 spots available</p>
+                </div>
+
+                {{-- Buses --}}
+                <div class="bg-card-dark p-6 rounded-xl border border-gray-700 hover:border-primary/50 transition">
+                    <div class="flex justify-between items-start mb-4">
+                        <div class="p-2.5 bg-purple-500/10 rounded-lg text-purple-400">
+                            <span class="material-symbols-outlined">directions_bus</span>
+                        </div>
+                        <span class="text-xs bg-gray-700 text-gray-300 px-2 py-1 rounded">
+                            Zone B
+                        </span>
+                    </div>
+
+                    <p class="text-text-muted text-sm">Bus</p>
+                    <h3 class="text-2xl font-bold text-white mt-1">
+                        2 <span class="text-gray-500 font-normal">/10</span>
+                    </h3>
+
+                    <div class="w-full bg-gray-700 rounded-full h-2 mt-4">
+                        <div class="bg-primary h-2 rounded-full" style="width:20%"></div>
+                    </div>
+
+                    <p class="text-xs text-gray-500 mt-2">8 spots available</p>
+                </div>
+
+                {{-- Revenue --}}
+                <div class="bg-card-dark p-6 rounded-xl border border-gray-700 relative overflow-hidden">
+                    <span class="material-symbols-outlined absolute right-4 top-4 text-[96px] text-primary opacity-10">
+                        attach_money
+                    </span>
+
+                    <p class="text-text-muted text-sm">Today Revenue</p>
+                    <h3 class="text-3xl font-bold text-white mt-2">
+                        Rp 1.240.000
+                    </h3>
+
+                    <span class="inline-flex items-center gap-1 mt-3 text-green-400 text-xs font-semibold">
+                        <span class="material-symbols-outlined text-[14px]">trending_up</span>
+                        +12% vs yesterday
+                    </span>
+                </div>
+
+            </div>
+
+            {{-- CHART + TABLE --}}
+            <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+
+                {{-- CHART --}}
+                <div class="bg-card-dark p-6 rounded-xl border border-gray-700">
+                    <h3 class="text-white font-bold mb-6">Real-time Occupancy</h3>
+                    <div class="flex justify-center">
+                        <div class="relative size-56 rounded-full"
+                            style="background:conic-gradient(#facc14 0% 37%, #4b5563 37% 100%)">
+                            <div class="absolute inset-4 bg-card-dark rounded-full flex flex-col items-center justify-center">
+                                <span class="text-sm text-gray-400">Total Filled</span>
+                                <span class="text-4xl font-bold text-white">37%</span>
+                                <span class="text-xs text-gray-500">59 / 160</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- TABLE --}}
+                <div class="xl:col-span-2 bg-card-dark rounded-xl border border-gray-700 overflow-hidden">
+                    <div class="p-6 border-b border-gray-700">
+                        <h3 class="text-white font-bold">Recent Movements</h3>
+                    </div>
+
+                    <table class="w-full text-sm">
+                        <thead class="bg-gray-800 text-gray-400">
+                            <tr>
+                                <th class="px-6 py-3">Status</th>
+                                <th class="px-6 py-3">Plate</th>
+                                <th class="px-6 py-3">Type</th>
+                                <th class="px-6 py-3">Gate</th>
+                                <th class="px-6 py-3 text-right">Time</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-700">
+                            <tr class="hover:bg-gray-700/30">
+                                <td class="px-6 py-3 text-green-400">IN</td>
+                                <td class="px-6 py-3 text-white">ABC-1234</td>
+                                <td class="px-6 py-3">Sedan</td>
+                                <td class="px-6 py-3">Gate A</td>
+                                <td class="px-6 py-3 text-right">10:42</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+            </div>
+
+        @else
+
+            {{-- ===== PETUGAS DASHBOARD (NANTI) ===== --}}
+            <div class="text-gray-400">
+                Dashboard petugas
+            </div>
+
+        @endif
+
     </div>
 </div>

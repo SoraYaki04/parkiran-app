@@ -38,7 +38,7 @@ class LoginForm extends Form
         }
 
         // Cek apakah user aktif - SESUAI DENGAN DATABASE ANDA 'aktif'
-        if ($user->status !== 'aktif') {
+        if ($user->status !== 'active') {
             RateLimiter::hit($this->throttleKey());
             throw ValidationException::withMessages([
                 'username' => 'Akun tidak aktif. Hubungi administrator.',
