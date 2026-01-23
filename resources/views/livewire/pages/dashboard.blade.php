@@ -14,10 +14,10 @@ new #[Layout('layouts.app')] #[Title('Dashboard')] class extends Component {
 };
 ?>
 
-<div class="flex-1 flex flex-col h-full overflow-hidden bg-background-dark">
+<div class="flex-1 flex flex-col h-full overflow-hidden">
 
     {{-- HEADER DASHBOARD --}}
-    <header class="h-20 px-8 flex items-center justify-between border-b border-gray-800 bg-background-dark/95 backdrop-blur z-10">
+    <header class="h-20 px-8 flex items-center justify-between border-b border-gray-800 backdrop-blur z-10">
         <div>
             <h2 class="text-2xl font-bold text-white tracking-tight">
                 Dashboard Overview
@@ -151,7 +151,7 @@ new #[Layout('layouts.app')] #[Title('Dashboard')] class extends Component {
                     </div>
 
                     <table class="w-full text-sm">
-                        <thead class="bg-gray-800 text-gray-400">
+                        <thead class="text-gray-400">
                             <tr>
                                 <th class="px-6 py-3">Status</th>
                                 <th class="px-6 py-3">Plate</th>
