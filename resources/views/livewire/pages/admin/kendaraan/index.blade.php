@@ -92,16 +92,16 @@ class extends Component {
     {{-- HEADER --}}
     <header class="px-8 py-6 border-b border-gray-800 flex justify-between items-end">
         <div>
-            <h2 class="text-white text-3xl font-black">Vehicle Configuration</h2>
+            <h2 class="text-white text-3xl font-black">Konfigurasi Kendaraan</h2>
             <p class="text-slate-400">
-                Manage vehicle categories for parking
+                Atur tipe kendaraan
             </p>
         </div>
 
         <button wire:click="create"
             class="flex items-center gap-2 bg-primary text-black px-5 py-2.5 rounded-lg font-bold">
             <span class="material-symbols-outlined">add</span>
-            Add Vehicle Type
+            Tambah Tipe Kendaraan
         </button>
     </header>
 
@@ -110,7 +110,7 @@ class extends Component {
         <div class="bg-surface-dark p-5 rounded-xl border border-[#3E4C59]">
             <input wire:model.live="search"
                 class="w-full bg-gray-900 border border-[#3E4C59] rounded-lg px-4 py-2 text-white"
-                placeholder="Search code / vehicle type">
+                placeholder="Cari kode / tipe kendaraan">
         </div>
     </div>
 
@@ -120,9 +120,9 @@ class extends Component {
             <table class="w-full">
                 <thead class="bg-gray-900">
                     <tr>
-                        <th class="px-6 py-4 text-left text-slate-400 text-xs">Code</th>
-                        <th class="px-6 py-4 text-left text-slate-400 text-xs">Vehicle Type</th>
-                        <th class="px-6 py-4 text-center text-slate-400 text-xs">Action</th>
+                        <th class="px-6 py-4 text-left text-slate-400 text-xs">Kode</th>
+                        <th class="px-6 py-4 text-left text-slate-400 text-xs">Tipe Kendaraan</th>
+                        <th class="px-6 py-4 text-center text-slate-400 text-xs">Aksi</th>
                     </tr>
                 </thead>
 
@@ -148,7 +148,7 @@ class extends Component {
                     @empty
                     <tr>
                         <td colspan="3" class="py-10 text-center text-slate-500">
-                            No vehicle types found
+                            Tidak ada tipe kendaraan
                         </td>
                     </tr>
                     @endforelse
@@ -161,7 +161,7 @@ class extends Component {
     <div x-show="open" x-transition class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
         <div class="bg-card-dark w-full max-w-md p-6 rounded-xl">
             <h3 class="text-white font-bold mb-4">
-                {{ $isEdit ? 'Edit Vehicle Type' : 'Add Vehicle Type' }}
+                {{ $isEdit ? 'Edit Tipe kendaraan' : 'Tambah Tipe Kendaraan' }}
             </h3>
 
             <form wire:submit.prevent="save" class="space-y-3">
@@ -175,10 +175,10 @@ class extends Component {
 
                 <div class="flex justify-end gap-2 pt-4">
                     <button type="button" x-on:click="open=false" class="text-gray-400">
-                        Cancel
+                        Batal
                     </button>
                     <button class="bg-primary px-5 py-2 rounded-lg font-bold text-black">
-                        Save
+                        Simpan
                     </button>
                 </div>
             </form>

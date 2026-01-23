@@ -216,158 +216,145 @@ class extends Component {
 };
 ?>
 
-<div x-data="{ open: false }" x-on:open-modal.window="open = true" x-on:close-modal.window="open = false" class="p-6">
+<div class="flex-1 flex flex-col h-full overflow-hidden"
+     x-data="{ open:false }"
+     x-on:open-modal.window="open=true"
+     x-on:close-modal.window="open=false">
 
-    <!-- HEADER -->
-    <div class="flex items-center justify-between mb-6">
-        <h1 class="text-3xl font-bold text-white">Managemen Area Parkiran</h1>
+    {{-- HEADER --}}
+    <header class="px-8 py-6 border-b border-gray-800 flex justify-between items-end">
+        <div>
+            <h2 class="text-white text-3xl font-black">Manajemen Area Parkir</h2>
+            <p class="text-slate-400">
+                Atur area parkir
+            </p>
+        </div>
 
-        <button wire:click="create" class="bg-primary px-4 py-2 rounded-lg font-bold text-black hover:opacity-90">
-            + Tambah Area
+        <button wire:click="create"
+            class="flex items-center gap-2 bg-primary text-black px-5 py-2.5 rounded-lg font-bold">
+            <span class="material-symbols-outlined">add</span>
+            Tambah Area
         </button>
-    </div>
+    </header>
+
 
     <!-- SEARCH -->
-    <div class="mb-4">
-        <input wire:model.live="search" placeholder="Cari area..."
-            class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none">
+    <div class="px-8 pt-6">
+        <div class="bg-surface-dark p-5 rounded-xl border border-[#3E4C59]">
+            <input
+                wire:model.live="search"
+                class="w-full bg-gray-900 border border-[#3E4C59] rounded-lg px-4 py-2 text-white"
+                placeholder="Cari kode / nama / lokasi area">
+        </div>
     </div>
 
-    <!-- TABLE -->
-    <div class="overflow-hidden rounded-xl border border-gray-800 bg-header-dark shadow-xl">
-        <table class="w-full text-left text-sm text-gray-400">
-            <thead class="bg-gray-800/50 text-xs uppercase font-semibold text-gray-300 tracking-wider">
-                <tr>
-                    <th class="px-6 py-4">Kode Area</th>
-                    <th class="px-6 py-4">Nama Area</th>
-                    <th class="px-6 py-4">Lokasi Fisik</th>
-                    <th class="px-6 py-4 text-center">Kapasitas</th>
-                    <th class="px-6 py-4 text-center">Status</th>
-                    <th class="px-6 py-4 text-center">Aksi</th>
-                </tr>
-            </thead>
 
-            <tbody class="divide-y divide-gray-800 bg-[#111827]">
+    {{-- TABLE --}}
+    <div class="flex-1 overflow-y-auto px-8 py-6">
+        <div class="bg-surface-dark border border-[#3E4C59] rounded-xl overflow-hidden">
+            <table class="w-full">
+                <thead class="bg-gray-900">
+                    <tr>
+                        <th class="px-6 py-4 text-left text-slate-400 text-xs">Kode Area</th>
+                        <th class="px-6 py-4 text-left text-slate-400 text-xs">Nama Area</th>
+                        <th class="px-6 py-4 text-left text-slate-400 text-xs">Lokasi</th>
+                        <th class="px-6 py-4 text-center text-slate-400 text-xs">Kapasitas</th>
+                        <th class="px-6 py-4 text-center text-slate-400 text-xs">Status</th>
+                        <th class="px-6 py-4 text-center text-slate-400 text-xs">Aksi</th>
+                    </tr>
+                </thead>
 
-                @forelse ($this->areas as $area)
-                <tr class="hover:bg-gray-800/60 transition">
-                    <td class="px-6 py-4 font-semibold text-white">
-                        {{ $area->kode_area }}
-                    </td>
+                <tbody class="divide-y divide-[#3E4C59]">
 
-                    <td class="px-6 py-4 text-gray-300">
-                        {{ $area->nama_area }}
-                    </td>
+                    @forelse ($this->areas as $area)
+                    <tr class="hover:bg-surface-hover">
+                        <td class="px-6 py-4 text-white font-bold">
+                            {{ $area->kode_area }}
+                        </td>
 
-                    <td class="px-6 py-4 text-gray-400">
-                        {{ $area->lokasi_fisik }}
-                    </td>
+                        <td class="px-6 py-4 text-white">
+                            {{ $area->nama_area }}
+                        </td>
 
-                    <td class="px-6 py-4 text-center">
-                        <span class="font-bold text-gray-200">
+                        <td class="px-6 py-4 text-slate-300">
+                            {{ $area->lokasi_fisik }}
+                        </td>
+
+                        <td class="px-6 py-4 text-center text-white font-bold">
                             {{ $area->kapasitas_total ?? 0 }}
-                        </span>
-                        <span class="text-xs text-gray-500 ml-1">Slot</span>
-                    </td>
+                        </td>
 
-                    <!-- STATUS -->
-                    <td class="px-6 py-4 text-center">
-                       @php $status = $area->status; @endphp
+                        <td class="px-6 py-4 text-center">
+                            @php $status = $area->status; @endphp
 
-                        @if ($status === 'Full')
-                        <span
-                            class="inline-flex items-center rounded-full bg-red-500/10 border border-red-500/20 px-2.5 py-0.5 text-xs font-bold text-red-400">
-                            <span class="mr-1.5 h-1.5 w-1.5 rounded-full bg-red-500"></span>
-                            Full
-                        </span>
-                        @elseif ($status === 'Available')
-                        <span
-                            class="inline-flex items-center rounded-full bg-green-500/10 border border-green-500/20 px-2.5 py-0.5 text-xs font-bold text-green-400">
-                            <span class="mr-1.5 h-1.5 w-1.5 rounded-full bg-green-500"></span>
-                            Available
-                        </span>
-                        @else
-                        <span
-                            class="inline-flex items-center rounded-full bg-yellow-500/10 border border-yellow-500/20 px-2.5 py-0.5 text-xs font-bold text-yellow-400">
-                            Maintenance
-                        </span>
-                        @endif
-                    </td>
+                            @if ($status === 'Full')
+                                <span class="text-xs font-bold text-red-400">Full</span>
+                            @elseif ($status === 'Available')
+                                <span class="text-xs font-bold text-green-400">Available</span>
+                            @else
+                                <span class="text-xs font-bold text-yellow-400">Maintenance</span>
+                            @endif
+                        </td>
 
-                    <!-- ACTION -->
-                    <td class="px-6 py-4 text-center ">
-                        <div class="flex justify-center gap-1">
-
-                            <!-- EDIT -->
-                            <button wire:click="edit({{ $area->id }})"
-                                class="rounded-lg p-2 text-gray-400 hover:bg-yellow-500/10 hover:text-primary"
-                                title="Edit">
-                                <span class="material-symbols-outlined text-[20px]">edit</span>
+                        <td class="px-6 py-4 text-center">
+                            <button wire:click="edit({{ $area->id }})" class="text-primary p-2">
+                                <span class="material-symbols-outlined">edit</span>
                             </button>
-
-                            <!-- DELETE -->
-                            <button wire:click="delete({{ $area->id }})" wire:confirm="Yakin ingin menghapus area ini?"
-                                class="rounded-lg p-2 text-gray-400 hover:bg-red-500/10 hover:text-red-400"
-                                title="Delete">
-                                <span class="material-symbols-outlined text-[20px]">delete</span>
+                            <button wire:click="delete({{ $area->id }})"
+                                onclick="return confirm('Hapus area ini?')"
+                                class="text-red-400 p-2">
+                                <span class="material-symbols-outlined">delete</span>
                             </button>
-
-                        </div>
-                    </td>
-                </tr>
-                @empty
-                <tr>
-                    <td colspan="6" class="px-6 py-6 text-center text-gray-500">
-                        Data area parkir belum tersedia
-                    </td>
-                </tr>
-                @endforelse
+                        </td>
+                    </tr>
+                    @empty
+                    <tr>
+                        <td colspan="6" class="py-10 text-center text-slate-500">
+                            Tidak ada area parkir
+                        </td>
+                    </tr>
+                    @endforelse
 
             </tbody>
         </table>
     </div>
 
-    {{-- <div class="mt-4 flex items-center justify-between">
-        <p class="text-sm text-gray-400">Showing <span class="font-medium text-white">1</span> to <span
-                class="font-medium text-white">5</span> of <span class="font-medium text-white">12</span> results</p>
-        <div class="flex items-center gap-2">
-            <button
-                class="rounded-lg border border-gray-700 p-2 text-gray-400 hover:bg-gray-800 hover:text-white disabled:opacity-50">
-                <span class="material-symbols-outlined text-[20px]">chevron_left</span>
-            </button>
-            <button class="rounded-lg border border-gray-700 p-2 text-gray-400 hover:bg-gray-800 hover:text-white">
-                <span class="material-symbols-outlined text-[20px]">chevron_right</span>
-            </button>
-        </div>
-    </div> --}}
-
     <!-- MODAL -->
-    <div x-show="open" x-transition class="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+    <div x-show="open" x-transition class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div @click.away="open=false" class="bg-card-dark w-full max-w-lg p-6 rounded-xl">
 
-        <div @click.away="open=false" class="bg-gray-900 rounded-xl w-full max-w-lg p-6 border border-gray-700">
-
-            <h2 class="text-xl font-bold text-white mb-4">
-                {{ $isEdit ? 'Edit Area' : 'Add Area' }}
-            </h2>
+            <h3 class="text-white font-bold mb-4">
+                {{ $isEdit ? 'Edit Area Parkir' : 'Tambah Area Parkir' }}
+            </h3>
 
             <form wire:submit.prevent="save" class="space-y-4">
 
+
+                <!-- KODE AREA -->
                 <div>
                     <label class="text-sm text-gray-400">Kode Area</label>
-                    <input wire:model="kode_area"
-                        class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white">
+                    <input
+                        wire:model="kode_area"
+                        placeholder="Contoh: A01, B02, VIP-1"
+                        class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500">
                 </div>
 
+                <!-- NAMA AREA -->
                 <div>
                     <label class="text-sm text-gray-400">Nama Area</label>
-                    <input wire:model="nama_area"
-                        class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white">
+                    <input
+                        wire:model="nama_area"
+                        placeholder="Contoh: Area Basement, Area VIP"
+                        class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500">
                 </div>
 
+                <!-- LOKASI FISIK -->
                 <div>
                     <label class="text-sm text-gray-400">Lokasi Fisik</label>
-                    <input wire:model="lokasi_fisik"
-                        class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white">
+                    <input
+                        wire:model="lokasi_fisik"
+                        placeholder="Contoh: Lantai B1 dekat lift"
+                        class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500">
                 </div>
 
                 <hr class="border-gray-700">
@@ -377,7 +364,8 @@ class extends Component {
                 <div class="space-y-1">
 
                     <label class="flex items-center gap-2 text-gray-300">
-                        <input type="checkbox"
+                        <input
+                            type="checkbox"
                             wire:model="selectedTipe"
                             value="{{ $tipe->id }}"
                             class="rounded border-gray-600 bg-gray-800">
@@ -385,11 +373,12 @@ class extends Component {
                     </label>
 
                     @if (in_array($tipe->id, $selectedTipe))
-                        <input type="number"
+                        <input
+                            type="number"
                             min="1"
                             wire:model.defer="kapasitas.{{ $tipe->id }}"
-                            placeholder="Jumlah slot {{ $tipe->nama_tipe }}"
-                            class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white">
+                            placeholder="Jumlah slot untuk {{ $tipe->nama_tipe }}"
+                            class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500">
                     @endif
 
                 </div>
@@ -397,14 +386,15 @@ class extends Component {
 
                 <div class="flex justify-end gap-3 pt-4">
                     <button type="button" @click="open=false" class="text-gray-400 hover:text-white">
-                        Cancel
+                        Batal
                     </button>
                     <button class="bg-primary px-4 py-2 rounded-lg font-bold text-black">
-                        Save
+                        Simpan
                     </button>
                 </div>
 
             </form>
         </div>
     </div>
+
 </div>
