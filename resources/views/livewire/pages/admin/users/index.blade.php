@@ -32,8 +32,8 @@ class extends Component {
     {
         return User::query()
             ->when($this->search, function ($q) {
-                $q->where(function ($qq) {
-                    $qq->where('name', 'like', "%{$this->search}%")
+                $q->where(function ($sub) {
+                    $sub->where('name', 'like', "%{$this->search}%")
                        ->orWhere('username', 'like', "%{$this->search}%")
                        ->orWhere('id', $this->search);
                 });
@@ -134,7 +134,7 @@ class extends Component {
 };
 ?>
 
-<div class="flex-1 flex flex-col h-full overflow-hidden bg-background-dark"
+<div class="flex-1 flex flex-col h-full overflow-hidden"
      x-data="{ open: false }"
      x-on:open-modal.window="open = true"
      x-on:close-modal.window="open = false">
@@ -159,11 +159,11 @@ class extends Component {
             <div class="flex flex-col md:flex-row gap-4">
 
                 <input wire:model.live="search"
-                       class="flex-1 bg-[#161e25] border border-[#3E4C59] rounded-lg px-4 py-2 text-white"
+                       class="flex-1 bg-gray-900 border border-[#3E4C59] rounded-lg px-4 py-2 text-white"
                        placeholder="Search name / username / ID">
 
                 <select wire:model.live="filterRole"
-                        class="bg-[#161e25] border border-[#3E4C59] rounded-lg px-4 py-2 text-white">
+                        class="bg-gray-900 border border-[#3E4C59] rounded-lg px-4 py-2 text-white">
                     <option value="">All Roles</option>
                     <option value="1">Admin</option>
                     <option value="2">Petugas</option>
@@ -177,7 +177,7 @@ class extends Component {
     <div class="flex-1 overflow-y-auto px-8 py-6">
         <div class="bg-surface-dark border border-[#3E4C59] rounded-xl overflow-hidden">
             <table class="w-full">
-                <thead class="bg-[#161e25]">
+                <thead class="bg-gray-900">
                     <tr>
                         <th class="px-6 py-4 text-left text-slate-400 text-xs">Name</th>
                         <th class="px-6 py-4 text-left text-slate-400 text-xs">Username</th>
