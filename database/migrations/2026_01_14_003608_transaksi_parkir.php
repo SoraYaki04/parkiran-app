@@ -10,15 +10,28 @@ return new class extends Migration
     {
         Schema::create('transaksi_parkir', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('kendaraan_id')->constrained('kendaraan');
-            $table->foreignId('area_id')->constrained('area_parkir');
-            $table->dateTime('jam_masuk');
-            $table->dateTime('jam_keluar')->nullable();
+
+            // kode karcis unik (QR / barcode / random)
+            $table->string('kode_karcis')->unique();
+
+            $table->foreignId('tipe_kendaraan_id')
+                ->constrained('tipe_kendaraan');
+
+            $table->timestamp('waktu_masuk');
+            $table->timestamp('waktu_keluar')->nullable();
+
             $table->integer('durasi_menit')->nullable();
-            $table->string('status'); // IN / OUT
-            $table->foreignId('user_masuk_id')->constrained('users');
-            $table->foreignId('user_keluar_id')->nullable()->constrained('users');
+            $table->integer('total_bayar')->nullable();
+
+            $table->foreignId('member_id')
+                ->nullable()
+                ->constrained('member');
+
+            $table->enum('status', ['IN', 'OUT']);
+
+            $table->timestamps();
         });
+
     }
 
     public function down(): void
