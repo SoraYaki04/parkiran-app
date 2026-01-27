@@ -10,11 +10,17 @@ return new class extends Migration
     {
         Schema::create('tarif_parkir', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('tipe_kendaraan_id')->constrained('tipe_kendaraan');
-            $table->integer('durasi_min');
-            $table->integer('durasi_max');
+            $table->foreignId('tipe_kendaraan_id')
+                ->constrained('tipe_kendaraan')
+                ->cascadeOnDelete();
+
+            $table->integer('durasi_min'); // menit
+            $table->integer('durasi_max'); // menit
             $table->integer('tarif');
+
+            $table->timestamps();
         });
+
     }
 
     public function down(): void

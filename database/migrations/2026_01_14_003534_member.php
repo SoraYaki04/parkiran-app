@@ -10,12 +10,14 @@ return new class extends Migration
     {
         Schema::create('member', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('kendaraan_id')->constrained('kendaraan')->cascadeOnDelete();
+            $table->string('nama')->nullable();
+            $table->string('no_hp')->unique(); // kunci utama cek member
             $table->string('tipe_member'); // Regular, Silver, Gold
             $table->integer('diskon_persen');
             $table->date('tanggal_mulai');
             $table->date('tanggal_akhir');
-            $table->string('status');
+            $table->enum('status', ['aktif', 'nonaktif']);
+            $table->timestamps();
         });
     }
 
