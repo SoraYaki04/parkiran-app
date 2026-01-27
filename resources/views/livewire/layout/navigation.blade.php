@@ -52,16 +52,9 @@ new class extends Component
 
     @if(auth()->user()->role_id == 1)
         {{-- ADMIN MENU --}}
+        <div class="pt-4 mt-4 border-t border-gray-800">
 
-        <a href="{{ route('admin.area.index') }}" wire:navigate
-           class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all
-           {{ request()->routeIs('admin.area.*')
-                ? 'bg-primary/10 border-l-4 border-primary text-white'
-                : 'text-gray-400 hover:bg-gray-800 hover:text-white' }}">
-            <span class="material-symbols-outlined">local_parking</span>
-            Area Parkir
-        </a>
-
+        {{-- TIPE KENDARAAN --}}
         <a href="{{ route('admin.kendaraan.index') }}" wire:navigate
            class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all
            {{ request()->routeIs('admin.kendaraan.*')
@@ -69,8 +62,9 @@ new class extends Component
                 : 'text-gray-400 hover:bg-gray-800 hover:text-white' }}">
             <span class="material-symbols-outlined">directions_car</span>
             Tipe Kendaraan
-        </a>
+        </a>        
 
+        {{-- TARIF --}}
         <a href="{{ route('admin.tarif.index') }}" wire:navigate
            class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all
            {{ request()->routeIs('admin.tarif.*')
@@ -78,6 +72,16 @@ new class extends Component
                 : 'text-gray-400 hover:bg-gray-800 hover:text-white' }}">
             <span class="material-symbols-outlined">attach_money</span>
             Tarif
+        </a>
+
+        {{-- AREA PARKIR --}}
+        <a href="{{ route('admin.area.index') }}" wire:navigate
+           class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all
+           {{ request()->routeIs('admin.area.*')
+                ? 'bg-primary/10 border-l-4 border-primary text-white'
+                : 'text-gray-400 hover:bg-gray-800 hover:text-white' }}">
+            <span class="material-symbols-outlined">local_parking</span>
+            Area Parkir
         </a>
 
         {{-- USER MANAGEMENT --}}
@@ -89,6 +93,9 @@ new class extends Component
             <span class="material-symbols-outlined">group</span>
             Manajemen User
         </a>
+
+        <div class="pt-4 mt-4 border-t border-gray-800">
+        <p class="px-4 text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">System</p>
 
         <a href="{{ route('settings') }}" wire:navigate
            class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all
