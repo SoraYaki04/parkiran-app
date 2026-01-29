@@ -35,7 +35,7 @@ new class extends Component
     </div>
 
     {{-- NAV --}}
-<nav class="flex-1 px-4 py-4 flex flex-col gap-2 overflow-y-auto">
+    <nav class="flex-1 px-4 py-4 flex flex-col gap-2 overflow-y-auto scrollbar-hide">
 
     {{-- DASHBOARD --}}
     <a href="{{ route('dashboard') }}" wire:navigate
@@ -84,13 +84,35 @@ new class extends Component
             Area Parkir
         </a>
 
+        <div class="pt-4 mt-4 border-t border-gray-800">
+
+        {{-- TIER MEMBER --}}
+        <a href="{{ route('admin.member.index2') }}" wire:navigate
+           class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all
+           {{ request()->routeIs('admin.member.index2')
+                ? 'bg-primary/10 border-l-4 border-primary text-white'
+                : 'text-gray-400 hover:bg-gray-800 hover:text-white' }}">
+            <span class="material-symbols-outlined">badge</span>
+            Tier Member
+        </a>
+
+        {{-- MEMBER --}}
+        <a href="{{ route('admin.member.index1') }}" wire:navigate
+           class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all
+           {{ request()->routeIs('admin.member.index1')
+                ? 'bg-primary/10 border-l-4 border-primary text-white'
+                : 'text-gray-400 hover:bg-gray-800 hover:text-white' }}">
+            <span class="material-symbols-outlined">group</span>
+            Member
+        </a>
+
         {{-- USER MANAGEMENT --}}
         <a href="{{ route('admin.users.index') }}" wire:navigate
            class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all
            {{ request()->routeIs('admin.users.*')
                 ? 'bg-primary/10 border-l-4 border-primary text-white'
                 : 'text-gray-400 hover:bg-gray-800 hover:text-white' }}">
-            <span class="material-symbols-outlined">group</span>
+            <span class="material-symbols-outlined">manage_accounts</span>
             Manajemen User
         </a>
 

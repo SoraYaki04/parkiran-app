@@ -56,30 +56,24 @@ Route::middleware('auth')->group(function () {
         Volt::route('dashboard', 'pages.admin.dashboard')
             ->name('dashboard');
 
-        // ? Manajemen Area
-        Volt::route('area', 'pages.admin.area.index')
-            ->name('area.index');
-        // Volt::route('area/create', 'pages.admin.area.create')
-        //     ->name('area.create');
-        // Volt::route('area/{area}/edit', 'pages.admin.area.edit')
-        //     ->name('area.edit');
-
         // ? Manajemen Kendaraan
         Volt::route('kendaraan', 'pages.admin.kendaraan.index')
-            ->name('kendaraan.index');
-        // Volt::route('kendaraan/create', 'pages.admin.kendaraan.create')
-        //     ->name('area.create');
-        // Volt::route('kendaraan/{kendaraan}/edit', 'pages.admin.kendaraan.edit')
-        //     ->name('kendaraan.edit');
+            ->name('kendaraan.index');;
 
         // ? Manajemen Tarif
         Volt::route('tarif', 'pages.admin.tarif.index')
             ->name('tarif.index');
-        // Volt::route('tarif/create', 'pages.admin.tarif.create')
-        //     ->name('area.create');
-        // Volt::route('tarif/{tarif}/edit', 'pages.admin.tarif.edit')
-        //     ->name('tarif.edit');
+
+        // ? Manajemen Area
+        Volt::route('area', 'pages.admin.area.index')
+            ->name('area.index');
         
+        // ? Manajemen Member
+        Volt::route('member', 'pages.admin.member.index1')
+            ->name('member.index1');
+        Volt::route('tier_member', 'pages.admin.member.index2')
+            ->name('member.index2');
+
         //  ? Manajemen User
         Volt::route('users', 'pages.admin.users.index')
             ->name('users.index');

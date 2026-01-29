@@ -66,6 +66,14 @@
             flex items-center justify-center text-yellow-600 dark:text-yellow-400 mb-2;
     }
 
+    /* Hide scrollbar but keep functionality */
+    .scrollbar-hide {
+        -ms-overflow-style: none;  /* IE and Edge */
+        scrollbar-width: none;  /* Firefox */
+    }
 
+    .scrollbar-hide::-webkit-scrollbar {
+        display: none;  /* Chrome, Safari and Opera */
+    }
 
 }
