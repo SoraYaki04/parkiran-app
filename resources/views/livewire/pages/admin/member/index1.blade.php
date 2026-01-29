@@ -303,7 +303,7 @@ class extends Component {
                             </span>
                         </td>
 
-                        <td class="px-6 py-4 text-text-muted text-center">
+                        <td class="px-6 py-4 text-slate-400 text-center">
                             {{ \Carbon\Carbon::parse($m->tanggal_berakhir)->format('d M Y') }}
                         </td>
 
