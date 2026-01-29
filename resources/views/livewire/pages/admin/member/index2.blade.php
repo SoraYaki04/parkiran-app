@@ -136,7 +136,7 @@ class extends Component {
     </div>
 
     {{-- TABLE --}}
-    <div class="flex-1 overflow-y-auto px-8 py-6">
+    <div class="flex-1 overflow-y-auto px-8 py-6 scrollbar-hide">
         <div class="bg-surface-dark border border-[#3E4C59] rounded-xl overflow-hidden">
             <table class="w-full">
                 <thead class="bg-gray-900">

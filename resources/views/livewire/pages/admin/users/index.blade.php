@@ -174,7 +174,7 @@ class extends Component {
     </div>
 
     {{-- TABLE --}}
-    <div class="flex-1 overflow-y-auto px-8 py-6">
+    <div class="flex-1 overflow-y-auto px-8 py-6 scrollbar-hide">
         <div class="bg-surface-dark border border-[#3E4C59] rounded-xl overflow-hidden">
             <table class="w-full">
                 <thead class="bg-gray-900">
@@ -194,10 +194,13 @@ class extends Component {
                             <td class="px-6 py-4 text-white">{{ $user->username }}</td>
                             <td class="px-6 py-4 text-center text-slate-300">{{ ucfirst($user->status) }}</td>
                             <td class="px-6 py-4 text-center">
-                                <span class="px-3 py-1 text-xs rounded-full
-                                    {{ $user->role_id == 1 ? 'bg-purple-500/10 text-purple-400' : 'bg-green-500/10 text-green-400' }}">
-                                    {{ $user->role_id == 1 ? 'Admin' : 'Petugas' }}
-                                </span>
+
+                            @php([$label, $class] = $user->role_badge)
+
+                            <span class="px-3 py-1 text-xs rounded-full {{ $class }}">
+                                {{ $label }}
+                            </span>
+                            
                             </td>
                             <td class="px-6 py-4 text-center">
                                 <button wire:click="edit({{ $user->id }})" class="text-primary p-2">
@@ -213,7 +216,7 @@ class extends Component {
                     @empty
                         <tr>
                             <td colspan="5" class="py-10 text-center text-slate-500">
-                                No users found
+                                TIdak Ada Data User
                             </td>
                         </tr>
                     @endforelse
@@ -226,11 +229,11 @@ class extends Component {
     <div x-show="open" x-transition class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
         <div class="bg-card-dark w-full max-w-md p-6 rounded-xl">
             <h3 class="text-white font-bold mb-4">
-                {{ $isEdit ? 'Edit User' : 'Add User' }}
+                {{ $isEdit ? 'Edit User' : 'Tambah User' }}
             </h3>
 
             <form wire:submit.prevent="save" class="space-y-3">
-                <input wire:model="name" class="w-full bg-[#161e25] border border-[#3E4C59] rounded-lg px-4 py-2 text-white" placeholder="Name">
+                <input wire:model="name" class="w-full bg-[#161e25] border border-[#3E4C59] rounded-lg px-4 py-2 text-white" placeholder="Nama">
                 <input wire:model="username" class="w-full bg-[#161e25] border border-[#3E4C59] rounded-lg px-4 py-2 text-white" placeholder="Username">
 
                 @if(!$isEdit)
@@ -240,9 +243,9 @@ class extends Component {
                 @endif
 
                 <select wire:model="status" class="w-full bg-[#161e25] border border-[#3E4C59] rounded-lg px-4 py-2 text-white">
-                    <option value="">Select Status</option>
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
+                    <option value="">Pilih Status</option>
+                    <option value="active">Aktif</option>
+                    <option value="inactive">Nonaktif</option>
                 </select>
 
                 <select wire:model="role_id" class="w-full bg-[#161e25] border border-[#3E4C59] rounded-lg px-4 py-2 text-white">

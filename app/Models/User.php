@@ -31,6 +31,17 @@ class User extends Authenticatable
         ];
     }
 
+    public function getRoleBadgeAttribute(): array
+{
+    return match ($this->role->name ?? '') {
+        'admin'   => ['Admin', 'bg-purple-500/10 text-purple-400'],
+        'petugas' => ['Petugas', 'bg-green-500/10 text-green-400'],
+        'owner'   => ['Owner', 'bg-blue-500/10 text-blue-400'],
+        default   => ['Unknown', 'bg-gray-500/10 text-gray-400'],
+    };
+}
+
+
     // ===== RELASI =====
     
     /**
