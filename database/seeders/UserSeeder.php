@@ -14,7 +14,7 @@ class UserSeeder extends Seeder
             'username' => 'admin',
             'password' => 'admin123', // AUTO di-hash oleh casts()
             'role_id' => 1,
-            'status' => 'aktif',
+            'status' => 'active',
         ]);
 
         User::create([
@@ -22,7 +22,7 @@ class UserSeeder extends Seeder
             'username' => 'petugas',
             'password' => 'petugas123',
             'role_id' => 2,
-            'status' => 'aktif',
+            'status' => 'active',
         ]);
 
         User::create([
@@ -30,7 +30,7 @@ class UserSeeder extends Seeder
             'username' => 'owner',
             'password' => 'owner123',
             'role_id' => 3,
-            'status' => 'aktif',
+            'status' => 'active',
         ]);
     }
 }
