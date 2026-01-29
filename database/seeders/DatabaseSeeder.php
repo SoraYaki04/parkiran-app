@@ -3,6 +3,9 @@
 namespace Database\Seeders;
 
 // use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+
+use App\Models\Kendaraan;
+use App\Models\TarifParkir;
 use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
@@ -16,6 +19,9 @@ class DatabaseSeeder extends Seeder
             RoleSeeder::class,
             UserSeeder::class,
             TierMemberSeeder::class,
+            TipeKendaraanSeeder::class,
+            KendaraanSeeder::class,
+            TarifParkirSeeder::class,
         ]);
     }
 }

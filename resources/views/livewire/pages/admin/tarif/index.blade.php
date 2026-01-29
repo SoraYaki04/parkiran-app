@@ -103,7 +103,7 @@ class extends Component {
 };
 ?>
 
-<div class="flex-1 flex flex-col h-full overflow-hidden"
+<div class="flex-1 flex flex-col h-full overflow-hidden "
      x-data="{ open: false }"
      x-on:open-modal.window="open = true"
      x-on:close-modal.window="open = false">
@@ -140,8 +140,8 @@ class extends Component {
     </div>
 
     {{-- TABLE --}}
-    <div class="flex-1 overflow-y-auto px-8 py-6">
-        <div class="bg-surface-dark border border-[#3E4C59] rounded-xl overflow-hidden">
+    <div class="flex-1 overflow-y-auto px-8 py-6 scrollbar-hide">
+        <div class="bg-surface-dark border border-[#3E4C59] rounded-xl overflow-hidden ">
             <table class="w-full">
                 <thead class="bg-gray-900">
                     <tr>
