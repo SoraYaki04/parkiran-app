@@ -11,9 +11,11 @@ return new class extends Migration
         Schema::create('kendaraan', function (Blueprint $table) {
             $table->id();
             $table->string('plat_nomor')->unique();
-            $table->foreignId('tipe_kendaraan_id')->constrained('tipe_kendaraan');
-            $table->string('nama_pemilik');
-            $table->string('status');
+            $table->foreignId('tipe_kendaraan_id')
+                ->constrained('tipe_kendaraan');
+            $table->string('nama_pemilik')->nullable();
+            $table->enum('status', ['aktif', 'nonaktif'])->default('aktif');
+            $table->timestamps();
         });
     }
 
