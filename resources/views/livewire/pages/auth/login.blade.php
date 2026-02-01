@@ -127,7 +127,7 @@ new #[Layout('layouts.guest')] class extends Component
             </div>
 
             <!-- Remember Me Checkbox -->
-            <div class="flex items-center justify-between">
+            {{-- <div class="flex items-center justify-between">
                 <div class="flex items-center gap-2">
                     <input wire:model="form.remember"
                            id="remember-me"
@@ -147,14 +147,14 @@ new #[Layout('layouts.guest')] class extends Component
                         Forgot Password?
                     </a>
                 @endif
-            </div>
+            </div> --}}
 
             <!-- Submit Button -->
             <button class="btn-primary-custom mt-2" type="submit">
                 Login
             </button>
 
-            <div class="text-center">
+            {{-- <div class="text-center">
                 <p class="text-s text-gray-400 dark:text-gray-600">
                     Belum punya akun?
                     <a class="underline text-primary hover:text-primary-400 transition-colors" 
@@ -163,7 +163,7 @@ new #[Layout('layouts.guest')] class extends Component
                         Register
                     </a>
                 </p>
-            </div>
+            </div> --}}
 
         </form>
         

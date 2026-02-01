@@ -142,14 +142,14 @@ class extends Component {
     {{-- HEADER --}}
     <header class="px-8 py-6 border-b border-gray-800 flex justify-between items-end">
         <div>
-            <h2 class="text-white text-3xl font-black">User Management</h2>
-            <p class="text-slate-400">Admin creates & manages users</p>
+            <h2 class="text-white text-3xl font-black">Manajemen User</h2>
+            <p class="text-slate-400">Buat dan Atur User</p>
         </div>
 
         <button wire:click="create"
                 class="flex items-center gap-2 bg-primary text-black px-5 py-2.5 rounded-lg font-bold">
             <span class="material-symbols-outlined">add</span>
-            Add User
+            Tambah User
         </button>
     </header>
 
@@ -164,9 +164,10 @@ class extends Component {
 
                 <select wire:model.live="filterRole"
                         class="bg-gray-900 border border-[#3E4C59] rounded-lg px-4 py-2 text-white">
-                    <option value="">All Roles</option>
+                    <option value="">Semua Role</option>
                     <option value="1">Admin</option>
                     <option value="2">Petugas</option>
+                    <option value="3">Owner</option>
                 </select>
 
             </div>
@@ -183,7 +184,7 @@ class extends Component {
                         <th class="px-6 py-4 text-left text-slate-400 text-xs">Username</th>
                         <th class="px-6 py-4 text-center text-slate-400 text-xs">Status</th>
                         <th class="px-6 py-4 text-center text-slate-400 text-xs">Role</th>
-                        <th class="px-6 py-4 text-center text-slate-400 text-xs">Action</th>
+                        <th class="px-6 py-4 text-center text-slate-400 text-xs">Aksi</th>
                     </tr>
                 </thead>
 
