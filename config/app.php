@@ -54,7 +54,10 @@ return [
     |
     */
 
-    'url' => env('APP_URL', 'http://localhost'),
+    // 'url' => env('APP_URL', 'http://localhost'),
+    'url' => env('APP_URL', 'http://192.168.1.3:8000'),
+    // 'url' => env('APP_URL', 'http://192.168.137.147:8000'),
+    // 'url' => env('APP_URL', 'http://192.168.207.35:8000'),
 
     'asset_url' => env('ASSET_URL', '/'),
 
@@ -69,7 +72,7 @@ return [
     |
     */
 
-    'timezone' => 'UTC',
+    'timezone' => 'Asia/Jakarta',
 
     /*
     |--------------------------------------------------------------------------

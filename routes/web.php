@@ -1,5 +1,7 @@
 <?php
-
+use App\Livewire\Parkir\Kiosk\LayarMasuk;
+use App\Livewire\Parkir\Mobile\PilihSlot;
+use App\Livewire\Parkir\Mobile\Karcis;
 use Illuminate\Support\Facades\Route;
 use Livewire\Volt\Volt;
 
@@ -17,7 +19,25 @@ use Livewire\Volt\Volt;
 // ===== 1. REDIRECT ROOT TO LOGIN =====
 Route::redirect('/', '/login')->name('home');
 
-// ===== 2. GUEST ROUTES (Untuk user belum login) =====
+// ===== 2. PUBLIC ROUTES (Kiosk & Mobile - Tanpa Login) =====
+Route::prefix('kiosk')->name('kiosk.')->group(function () {
+    Route::get('/masuk', LayarMasuk::class)
+        ->name('masuk');
+});
+
+Route::get(
+    '/parkir/mobile/pilih-slot/{token}',
+    PilihSlot::class
+)->name('mobile-parkir.pilih-slot');
+
+Route::get('/parkir/mobile/karcis/{token}', Karcis::class)
+    ->name('mobile.karcis');
+
+
+
+
+
+// ===== 3. GUEST ROUTES (Untuk user belum login) =====
 Route::middleware('guest')->group(function () {
     // Auth routes menggunakan Livewire Volt
     Volt::route('login', 'pages.auth.login')
@@ -33,7 +53,7 @@ Route::middleware('guest')->group(function () {
         ->name('password.reset');
 });
 
-// ===== 3. AUTHENTICATED ROUTES (Untuk user sudah login) =====
+// ===== 4. AUTHENTICATED ROUTES (Untuk user sudah login) =====
 Route::middleware('auth')->group(function () {
     // Dashboard dan Profile
     Volt::route('dashboard', 'pages.dashboard')
@@ -55,6 +75,9 @@ Route::middleware('auth')->group(function () {
         // ?  Dashboard Admin
         Volt::route('dashboard', 'pages.admin.dashboard')
             ->name('dashboard');
+
+        Volt::route('exit', 'pages.admin.exit.index')
+            ->name('exit.index');
 
         // ? Manajemen Kendaraan
         Volt::route('kendaraan', 'pages.admin.kendaraan.index')
@@ -95,6 +118,8 @@ Route::middleware('auth')->group(function () {
     // Volt::route('reports', 'pages.reports')
     //     ->name('reports');
 });
+
+
 
 // ===== 4. OPTIONAL: API atau route lain =====
 // Route::middleware('api')->prefix('api')->group(function () {

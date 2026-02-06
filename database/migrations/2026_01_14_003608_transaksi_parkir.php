@@ -4,8 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         Schema::create('transaksi_parkir', function (Blueprint $table) {
@@ -13,11 +12,22 @@ return new class extends Migration
 
             $table->string('kode_karcis')->unique();
 
+            // Relasi ke sesi QR
+            $table->foreignId('parkir_session_id')
+                ->nullable()
+                ->constrained('parkir_sessions')
+                ->cascadeOnUpdate()
+                ->nullOnDelete();
+
             $table->foreignId('kendaraan_id')
-                ->constrained('kendaraan');
+                ->constrained('kendaraan')
+                ->cascadeOnUpdate()
+                ->restrictOnDelete();
 
             $table->foreignId('tipe_kendaraan_id')
-                ->constrained('tipe_kendaraan');
+                ->constrained('tipe_kendaraan')
+                ->cascadeOnUpdate()
+                ->restrictOnDelete();
 
             $table->timestamp('waktu_masuk');
             $table->timestamp('waktu_keluar')->nullable();
@@ -27,10 +37,11 @@ return new class extends Migration
 
             $table->foreignId('member_id')
                 ->nullable()
-                ->constrained('member');
+                ->constrained('member')
+                ->cascadeOnUpdate()
+                ->nullOnDelete();
 
-            $table->enum('status', ['IN', 'OUT'])->default('IN');
-
+            $table->string('operator')->nullable();
             $table->timestamps();
         });
     }

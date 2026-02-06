@@ -16,4 +16,9 @@ class SlotParkir extends Model
         'tipe_kendaraan_id',
         'status'
     ];
+
+    public function area()
+    {
+        return $this->belongsTo(AreaParkir::class, 'area_id');
+    }
 }
