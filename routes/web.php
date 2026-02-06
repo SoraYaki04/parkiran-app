@@ -102,8 +102,15 @@ Route::middleware('auth')->group(function () {
             ->name('users.index');
         
         // ? Laporan dan Statistik
-        Volt::route('reports', 'pages.admin.reports')
-            ->name('reports');
+        Volt::route('laporan', 'pages.admin.laporan.index')
+            ->name('laporan.index');
+
+        // ? Export Laporan
+        Route::get('export/harian/pdf', [\App\Http\Controllers\LaporanExportController::class, 'pdfHarian'])->name('export.harian.pdf');
+        Route::get('export/harian/excel', [\App\Http\Controllers\LaporanExportController::class, 'excelHarian'])->name('export.harian.excel');
+        Route::get('export/rentang/pdf', [\App\Http\Controllers\LaporanExportController::class, 'pdfRentang'])->name('export.rentang.pdf');
+        Route::get('export/rentang/excel', [\App\Http\Controllers\LaporanExportController::class, 'excelRentang'])->name('export.rentang.excel');
+        Route::get('export/occupancy/pdf', [\App\Http\Controllers\LaporanExportController::class, 'pdfOccupancy'])->name('export.occupancy.pdf');
         
     });
     
