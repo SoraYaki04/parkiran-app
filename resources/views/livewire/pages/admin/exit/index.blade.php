@@ -183,9 +183,17 @@ class extends Component
         $this->durasiMenit = $sisaMenitHari % 60;
 
         // ===== MEMBER =====
-        $kendaraan = Kendaraan::with('member.tier')
-            ->where('plat_nomor', $this->session->plat_nomor)
-            ->first();
+        $kendaraan = Kendaraan::with([
+            'member' => function ($q) {
+                $q->where('status', 'aktif')
+                ->whereHas('tier', function ($t) {
+                    $t->where('status', 'aktif');
+                });
+            },
+            'member.tier'
+        ])
+        ->where('plat_nomor', $this->session->plat_nomor)
+        ->first();
 
         $this->member = null;
 
