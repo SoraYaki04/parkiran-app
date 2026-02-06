@@ -51,6 +51,16 @@ new class extends Component
     </a>
 
     @if(auth()->user()->role_id == 1)
+
+        <a href="{{ route('admin.exit.index') }}" wire:navigate
+           class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all
+           {{ request()->routeIs('admin.exit.*')
+                ? 'bg-primary/10 border-l-4 border-primary text-white'
+                : 'text-gray-400 hover:bg-gray-800 hover:text-white' }}">
+            <span class="material-symbols-outlined">garage_check</span>
+            Transaksi
+        </a>       
+
         {{-- ADMIN MENU --}}
         <div class="pt-4 mt-4 border-t border-gray-800">
 

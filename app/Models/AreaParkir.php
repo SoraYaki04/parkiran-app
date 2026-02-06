@@ -20,15 +20,15 @@ class AreaParkir extends Model
         return $this->hasMany(AreaKapasitas::class, 'area_id');
     }
 
-    public function slot()
+    public function slots()
     {
         return $this->hasMany(SlotParkir::class, 'area_id');
     }
 
     public function getStatusAttribute()
     {
-        $total = $this->slot()->count();
-        $terisi = $this->slot()->where('status', 'terisi')->count();
+        $total = $this->slots()->count();
+        $terisi = $this->slots()->where('status', 'terisi')->count();
 
         if ($total === 0) return 'Maintenance';
         if ($terisi >= $total) return 'Full';
