@@ -12,6 +12,7 @@ return new class extends Migration {
 
             $table->string('kode_karcis')->unique();
 
+            // Relasi ke sesi QR
             $table->foreignId('parkir_session_id')
                 ->nullable()
                 ->constrained('parkir_sessions')
@@ -46,7 +47,6 @@ return new class extends Migration {
                 ->nullOnDelete();
 
             $table->string('operator')->nullable();
-
             $table->timestamps();
         });
     }

@@ -183,9 +183,17 @@ class extends Component
         $this->durasiMenit = $sisaMenitHari % 60;
 
         // ===== MEMBER =====
-        $kendaraan = Kendaraan::with('member.tier')
-            ->where('plat_nomor', $this->session->plat_nomor)
-            ->first();
+        $kendaraan = Kendaraan::with([
+            'member' => function ($q) {
+                $q->where('status', 'aktif')
+                ->whereHas('tier', function ($t) {
+                    $t->where('status', 'aktif');
+                });
+            },
+            'member.tier'
+        ])
+        ->where('plat_nomor', $this->session->plat_nomor)
+        ->first();
 
         $this->member = null;
 
@@ -330,7 +338,7 @@ class extends Component
         
         <div class="w-full md:w-4/12 flex flex-col border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6">
             <div class="mb-8">
-                <h1 class="text-2xl font-bold text-slate-900 dark:text-white mb-1 border-l-4 border-primary-500 pl-3">Exit Gate</h1>
+                <h1 class="text-2xl font-bold text-slate-900 dark:text-white mb-1 border-l-4 border-primary-500 pl-3">Gerbang Keluar</h1>
                 <p class="text-slate-500 text-sm">Scan QR atau input plat manual</p>
             </div>
 
@@ -391,7 +399,6 @@ class extends Component
                             <div class="p-8 border-b border-slate-100 dark:border-slate-800 bg-gradient-to-r from-primary-50/50 to-transparent dark:from-primary-500/5">
                                 <div class="flex justify-between items-start">
                                     <div>
-                                        <p class="text-primary-700 dark:text-primary-400 text-[10px] font-black uppercase tracking-[0.2em] mb-1">Masuk Terkomfirmasi</p>
                                         <h2 class="text-5xl font-black text-slate-900 dark:text-white tracking-tight">{{ $session->plat_nomor }}</h2>
                                         <p class="text-sm text-slate-500 font-bold uppercase mt-1">{{ $session->tipeKendaraan->nama_tipe ?? '-' }}</p>
                                     </div>
