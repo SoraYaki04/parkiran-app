@@ -278,6 +278,7 @@ class extends Component
                 'kode_karcis'        => 'OUT-' . strtoupper(Str::random(8)),
                 'parkir_session_id'  => $this->session->id,
                 'kendaraan_id'       => $kendaraan->id,
+                'slot_parkir_id'     => $this->session->slot_parkir_id,
                 'tipe_kendaraan_id'  => $this->session->tipe_kendaraan_id,
                 'waktu_masuk'        => $this->session->confirmed_at,
                 'waktu_keluar'       => now(),

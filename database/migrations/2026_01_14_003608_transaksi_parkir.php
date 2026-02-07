@@ -24,6 +24,11 @@ return new class extends Migration {
                 ->cascadeOnUpdate()
                 ->restrictOnDelete();
 
+            $table->foreignId('slot_parkir_id')
+                ->nullable()
+                ->constrained('slot_parkir')
+                ->nullOnDelete();
+
             $table->foreignId('tipe_kendaraan_id')
                 ->constrained('tipe_kendaraan')
                 ->cascadeOnUpdate()
