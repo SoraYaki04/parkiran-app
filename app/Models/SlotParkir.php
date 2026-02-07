@@ -21,4 +21,14 @@ class SlotParkir extends Model
     {
         return $this->belongsTo(AreaParkir::class, 'area_id');
     }
+
+    public function tipeKendaraan()
+    {
+        return $this->belongsTo(TipeKendaraan::class);
+    }
+
+    public function kendaraan()
+    {
+        return $this->hasMany(Kendaraan::class);
+    }
 }

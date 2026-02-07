@@ -35,6 +35,11 @@ class TransaksiParkir extends Model
         return $this->belongsTo(Kendaraan::class);
     }
 
+    public function slotParkir()
+    {
+        return $this->belongsTo(SlotParkir::class, 'slot_parkir_id');
+    }
+
     // transaksi bisa punya member (opsional)
     public function member()
     {
@@ -45,5 +50,10 @@ class TransaksiParkir extends Model
     public function tipeKendaraan()
     {
         return $this->belongsTo(TipeKendaraan::class);
+    }
+
+    public function pembayaran()
+    {
+        return $this->hasOne(Pembayaran::class, 'transaksi_parkir_id');
     }
 }

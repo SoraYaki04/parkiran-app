@@ -79,6 +79,9 @@ Route::middleware('auth')->group(function () {
         Volt::route('exit', 'pages.admin.exit.index')
             ->name('exit.index');
 
+        Volt::route('data_parkir', 'pages.admin.data_parkir.index')
+            ->name('data_parkir.index');
+
         // ? Manajemen Kendaraan
         Volt::route('kendaraan', 'pages.admin.kendaraan.index')
             ->name('kendaraan.index');;

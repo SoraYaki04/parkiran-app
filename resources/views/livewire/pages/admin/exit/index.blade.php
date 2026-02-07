@@ -370,24 +370,57 @@ class extends Component
             </div>
 
             <div class="flex-1 min-h-[100px] overflow-y-auto scrollbar-hide">
-                <h3 class="text-slate-400 text-xs font-black uppercase tracking-widest mb-4">Transaksi Sebelumnya</h3>
-                <div class="space-y-3 ">
-                    @foreach($recentExits as $exit)
-                        <div class="flex items-center justify-between p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-slate-400 text-xs font-black uppercase tracking-widest">
+                        Transaksi Sebelumnya
+                    </h3>
+
+                    {{-- TOMBOL SELENGKAPNYA --}}
+                    <a
+                        href="{{ route('admin.data_parkir.index', ['tab' => 'selesai']) }}" wire:navigate
+                        class="text-[10px] font-black uppercase tracking-widest
+                            text-primary-500 hover:text-primary-600 transition"
+                    >
+                        Selengkapnya →
+                    </a>
+                </div>
+
+                <div class="space-y-3">
+                    @forelse($recentExits as $exit)
+                        <div class="flex items-center justify-between p-4 rounded-xl
+                                    bg-slate-50 dark:bg-slate-800/50
+                                    border border-slate-100 dark:border-slate-700">
                             <div class="flex items-center gap-3">
-                                <div class="size-10 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center">
-                                    <span class="material-symbols-outlined text-primary-600">history</span>
+                                <div class="size-10 rounded-full bg-primary-100 dark:bg-primary-900/30
+                                            flex items-center justify-center">
+                                    <span class="material-symbols-outlined text-primary-600">
+                                        history
+                                    </span>
                                 </div>
+
                                 <div class="flex flex-col">
-                                    <span class="font-bold text-slate-700 dark:text-slate-200 uppercase">{{ $exit['plat_nomor'] }}</span>
-                                    <span class="text-[10px] text-slate-400 font-medium">{{ $exit['waktu_keluar'] }}</span>
+                                    <span class="font-bold text-slate-700 dark:text-slate-200 uppercase">
+                                        {{ $exit['plat_nomor'] }}
+                                    </span>
+                                    <span class="text-[10px] text-slate-400 font-medium">
+                                        {{ $exit['waktu_keluar'] }}
+                                    </span>
                                 </div>
                             </div>
-                            <span class="text-[10px] font-black px-2 py-1 bg-emerald-500/10 text-emerald-600 rounded">DONE</span>
+
+                            <span class="text-[10px] font-black px-2 py-1
+                                        bg-emerald-500/10 text-emerald-600 rounded">
+                                DONE
+                            </span>
                         </div>
-                    @endforeach
+                    @empty
+                        <p class="text-xs text-slate-400 text-center py-4">
+                            Belum ada transaksi
+                        </p>
+                    @endforelse
                 </div>
             </div>
+
         </div>
 
         <div class="flex-1 h-full flex flex-col overflow-hidden bg-slate-100 dark:bg-slate-950">
