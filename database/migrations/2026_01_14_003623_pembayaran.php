@@ -16,8 +16,8 @@ return new class extends Migration
             $table->integer('diskon_nominal')->default(0);
             $table->integer('total_bayar');
             $table->string('metode_pembayaran');
-            $table->integer('jumlah_bayar');
-            $table->integer('kembalian');
+            $table->integer('jumlah_bayar')->nullable();
+            $table->integer('kembalian')->nullable();
             $table->dateTime('tanggal_bayar');
 
             $table->timestamps();
