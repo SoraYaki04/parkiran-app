@@ -35,10 +35,24 @@ new class extends Component
     </div>
 
     {{-- NAV --}}
-    <nav class="flex-1 px-4 py-4 flex flex-col gap-2 overflow-y-auto scrollbar-hide">
+<nav
+    x-data
+    x-ref="nav"
+    @scroll.debounce.100ms="
+        sessionStorage.setItem('sidebarScroll', $refs.nav.scrollTop)
+    "
+    x-init="
+        if (sessionStorage.getItem('sidebarScroll')) {
+            $refs.nav.scrollTop = sessionStorage.getItem('sidebarScroll')
+        }
+    "
+    class="flex-1 px-4 py-4 flex flex-col gap-2 overflow-y-auto scrollbar-hide"
+>
+
 
     {{-- DASHBOARD --}}
-    <a href="{{ route('dashboard') }}" wire:navigate
+    <a href="{{ route('dashboard') }}" wire:navigate.preserve-scroll
+
        class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all
        {{ request()->routeIs('dashboard')
             ? 'bg-primary/10 border-l-4 border-primary text-white'
@@ -52,7 +66,8 @@ new class extends Component
 
     @if(auth()->user()->role_id == 1)
 
-        <a href="{{ route('admin.exit.index') }}" wire:navigate
+        <a href="{{ route('admin.exit.index') }}" wire:navigate.preserve-scroll
+
            class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all
            {{ request()->routeIs('admin.exit.*')
                 ? 'bg-primary/10 border-l-4 border-primary text-white'
@@ -61,11 +76,21 @@ new class extends Component
             Transaksi
         </a>       
 
+        <a href="{{ route('admin.data_parkir.index') }}" wire:navigate.preserve-scroll
+           class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all
+           {{ request()->routeIs('admin.data_parkir.*')
+                ? 'bg-primary/10 border-l-4 border-primary text-white'
+                : 'text-gray-400 hover:bg-gray-800 hover:text-white' }}">
+            <span class="material-symbols-outlined">check_in_out</span>
+            Data Parkir
+        </a>
+
         {{-- ADMIN MENU --}}
         <div class="pt-4 mt-4 border-t border-gray-800">
 
         {{-- TIPE KENDARAAN --}}
-        <a href="{{ route('admin.kendaraan.index') }}" wire:navigate
+        <a href="{{ route('admin.kendaraan.index') }}" wire:navigate.preserve-scroll
+
            class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all
            {{ request()->routeIs('admin.kendaraan.*')
                 ? 'bg-primary/10 border-l-4 border-primary text-white'
@@ -75,7 +100,8 @@ new class extends Component
         </a>        
 
         {{-- TARIF --}}
-        <a href="{{ route('admin.tarif.index') }}" wire:navigate
+        <a href="{{ route('admin.tarif.index') }}" wire:navigate.preserve-scroll
+
            class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all
            {{ request()->routeIs('admin.tarif.*')
                 ? 'bg-primary/10 border-l-4 border-primary text-white'
@@ -85,7 +111,8 @@ new class extends Component
         </a>
 
         {{-- AREA PARKIR --}}
-        <a href="{{ route('admin.area.index') }}" wire:navigate
+        <a href="{{ route('admin.area.index') }}" wire:navigate.preserve-scroll
+
            class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all
            {{ request()->routeIs('admin.area.*')
                 ? 'bg-primary/10 border-l-4 border-primary text-white'
@@ -97,7 +124,8 @@ new class extends Component
         <div class="pt-4 mt-4 border-t border-gray-800">
 
         {{-- TIER MEMBER --}}
-        <a href="{{ route('admin.member.index2') }}" wire:navigate
+        <a href="{{ route('admin.member.index2') }}" wire:navigate.preserve-scroll
+
            class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all
            {{ request()->routeIs('admin.member.index2')
                 ? 'bg-primary/10 border-l-4 border-primary text-white'
@@ -107,7 +135,8 @@ new class extends Component
         </a>
 
         {{-- MEMBER --}}
-        <a href="{{ route('admin.member.index1') }}" wire:navigate
+        <a href="{{ route('admin.member.index1') }}" wire:navigate.preserve-scroll
+
            class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all
            {{ request()->routeIs('admin.member.index1')
                 ? 'bg-primary/10 border-l-4 border-primary text-white'
@@ -117,7 +146,8 @@ new class extends Component
         </a>
 
         {{-- USER MANAGEMENT --}}
-        <a href="{{ route('admin.users.index') }}" wire:navigate
+        <a href="{{ route('admin.users.index') }}" wire:navigate.preserve-scroll
+
            class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all
            {{ request()->routeIs('admin.users.*')
                 ? 'bg-primary/10 border-l-4 border-primary text-white'
@@ -127,7 +157,8 @@ new class extends Component
         </a>
 
         {{-- LAPORAN --}}
-        <a href="{{ route('admin.laporan.index') }}" wire:navigate
+        <a href="{{ route('admin.laporan.index') }}" wire:navigate.preserve-scroll
+
            class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all
            {{ request()->routeIs('admin.laporan.*')
                 ? 'bg-primary/10 border-l-4 border-primary text-white'
@@ -139,7 +170,8 @@ new class extends Component
         <div class="pt-4 mt-4 border-t border-gray-800">
         <p class="px-4 text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">System</p>
 
-        <a href="{{ route('settings') }}" wire:navigate
+        <a href="{{ route('settings') }}" wire:navigate.preserve-scroll
+
            class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all
            {{ request()->routeIs('settings')
                 ? 'bg-primary/10 border-l-4 border-primary text-white'
