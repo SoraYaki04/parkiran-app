@@ -14,13 +14,14 @@ class TransaksiParkir extends Model
     protected $fillable = [
         'kode_karcis',
         'kendaraan_id',
+        'slot_parkir_id',
         'tipe_kendaraan_id',
         'waktu_masuk',
         'waktu_keluar',
         'durasi_menit',
         'total_bayar',
         'member_id',
-        'status',
+        'operator',
     ];
 
     protected $casts = [
