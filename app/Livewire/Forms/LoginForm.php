@@ -3,6 +3,7 @@
 namespace App\Livewire\Forms;
 
 use App\Models\User;
+use App\Models\ActivityLog;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\RateLimiter;
@@ -22,6 +23,24 @@ class LoginForm extends Form
     #[Validate('boolean')]
     public bool $remember = false;
 
+    /* ======================
+        ACTIVITY LOGGER
+    =======================*/
+    private function logActivity(
+        string $action,
+        string $description,
+        string $target = null,
+        string $category = 'AUTH'
+    ) {
+        ActivityLog::create([
+            'user_id'     => auth()->id() ?? null,
+            'action'      => $action,
+            'category'    => $category,
+            'target'      => $target,
+            'description' => $description,
+        ]);
+    }
+
     public function authenticate(): void
     {
         $this->validate();
@@ -32,14 +51,30 @@ class LoginForm extends Form
 
         if (!$user) {
             RateLimiter::hit($this->throttleKey());
+
+            // Log username tidak ditemukan
+            $this->logActivity(
+                'LOGIN_FAILED',
+                'Username tidak ditemukan',
+                $this->username
+            );
+
             throw ValidationException::withMessages([
                 'username' => 'Username tidak ditemukan.',
             ]);
         }
 
-        // Cek apakah user aktif - SESUAI DENGAN DATABASE ANDA 'aktif'
+        // Cek apakah user aktif
         if ($user->status !== 'aktif') {
             RateLimiter::hit($this->throttleKey());
+
+            // Log akun tidak aktif
+            $this->logActivity(
+                'LOGIN_FAILED',
+                'Akun tidak aktif',
+                $user->username
+            );
+
             throw ValidationException::withMessages([
                 'username' => 'Akun tidak aktif. Hubungi administrator.',
             ]);
@@ -53,12 +88,28 @@ class LoginForm extends Form
 
         if (!Auth::attempt($credentials, $this->remember)) {
             RateLimiter::hit($this->throttleKey());
+
+            // Log password salah
+            $this->logActivity(
+                'LOGIN_FAILED',
+                'Password salah',
+                $user->username
+            );
+
             throw ValidationException::withMessages([
                 'password' => 'Password salah.',
             ]);
         }
 
+        // Login sukses
         RateLimiter::clear($this->throttleKey());
+
+        // Log login berhasil
+        $this->logActivity(
+            'LOGIN_SUCCESS',
+            'User berhasil login',
+            $user->username
+        );
     }
 
     protected function ensureIsNotRateLimited(): void
@@ -70,6 +121,13 @@ class LoginForm extends Form
         event(new Lockout(request()));
 
         $seconds = RateLimiter::availableIn($this->throttleKey());
+
+        // Log lockout
+        $this->logActivity(
+            'LOCKOUT',
+            'Terlalu banyak percobaan login',
+            $this->username
+        );
 
         throw ValidationException::withMessages([
             'username' => trans('auth.throttle', [
@@ -84,3 +142,4 @@ class LoginForm extends Form
         return Str::transliterate(Str::lower($this->username) . '|' . request()->ip());
     }
 }
+?>

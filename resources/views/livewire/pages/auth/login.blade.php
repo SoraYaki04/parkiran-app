@@ -150,10 +150,12 @@ new #[Layout('layouts.guest')] class extends Component
             </div> --}}
 
             <!-- Submit Button -->
-            <button class="btn-primary-custom mt-2" type="submit">
+            <button
+                    wire:loading.attr="disabled"
+                    type="submit"
+                    class="bg-primary px-4 py-2 rounded-lg font-bold text-black disabled:opacity-60">
                 Login
             </button>
-
             {{-- <div class="text-center">
                 <p class="text-s text-gray-400 dark:text-gray-600">
                     Belum punya akun?

@@ -15,6 +15,8 @@ class extends Component {
 
     public $memberId;
     public $kode_member;
+    public $nama;
+    public $no_hp;
     public $kendaraan_id;
     public $tier_member_id;
     public $tanggal_mulai;
@@ -65,8 +67,7 @@ class extends Component {
     /* ===============================
         COMPUTED DATA
     =============================== */
-
-   public function updated($property)
+    public function updated($property)
     {
         if (in_array($property, [
             'search',
@@ -77,20 +78,20 @@ class extends Component {
         }
     }
 
-
     public function getMembersProperty()
     {
         return Member::with(['kendaraan', 'tier'])
             ->when($this->search, function ($q) {
                 $q->where(function ($sub) {
                     $sub->where('kode_member', 'like', "%{$this->search}%")
+                        ->orWhere('nama', 'like', "%{$this->search}%")
                         ->orWhereHas('kendaraan', function ($k) {
                             $k->where('plat_nomor', 'like', "%{$this->search}%");
                         });
                 });
             })
             ->when($this->filterTier, function ($q) {
-                $q->where('tier_id', $this->filterTier);
+                $q->where('tier_member_id', $this->filterTier);
             })
             ->when($this->filterStatus, function ($q) {
                 $q->where('status', $this->filterStatus);
@@ -98,7 +99,6 @@ class extends Component {
             ->orderBy('created_at', 'desc')
             ->paginate(10);
     }
-
 
     public function getTiersProperty()
     {
@@ -161,8 +161,8 @@ class extends Component {
     public function create()
     {
         $this->reset([
-            'memberId', 'kendaraan_id', 'tier_member_id',
-            'plat_search','tanggal_berakhir'
+            'memberId','kendaraan_id','tier_member_id',
+            'plat_search','tanggal_berakhir','nama','no_hp'
         ]);
 
         $this->tanggal_mulai = now()->toDateString();
@@ -183,6 +183,8 @@ class extends Component {
 
         $this->memberId         = $m->id;
         $this->kode_member      = $m->kode_member;
+        $this->nama             = $m->nama;
+        $this->no_hp            = $m->no_hp;
         $this->kendaraan_id     = $m->kendaraan_id;
         $this->plat_search      = $m->kendaraan->plat_nomor;
         $this->tier_member_id   = $m->tier_member_id;
@@ -191,7 +193,7 @@ class extends Component {
         $this->status           = $m->status;
 
         $this->isEdit        = true;
-        $this->showDropdown = false;
+        $this->showDropdown   = false;
 
         $this->dispatch('open-modal');
     }
@@ -224,8 +226,10 @@ class extends Component {
     public function save()
     {
         $rules = [
-            'kendaraan_id'   => 'required|exists:kendaraan,id',
-            'tier_member_id' => 'required|exists:tier_member,id',
+            'nama'            => 'required|string|max:255',
+            'no_hp'           => 'required|string|max:20',
+            'kendaraan_id'    => 'required|exists:kendaraan,id',
+            'tier_member_id'  => 'required|exists:tier_member,id',
         ];
 
         if (!$this->isEdit) {
@@ -238,11 +242,13 @@ class extends Component {
             ['id' => $this->memberId],
             [
                 'kode_member'      => $this->kode_member,
+                'nama'             => $this->nama,
+                'no_hp'            => $this->no_hp,
                 'kendaraan_id'     => $this->kendaraan_id,
                 'tier_member_id'   => $this->tier_member_id,
                 'tanggal_mulai'    => $this->tanggal_mulai,
                 'tanggal_berakhir' => $this->tanggal_berakhir,
-                'status' => $this->isEdit ? $this->status : 'aktif',
+                'status'           => $this->isEdit ? $this->status : 'aktif',
             ]
         );
 
@@ -264,7 +270,7 @@ class extends Component {
         }
 
         $this->reset([
-            'memberId','kendaraan_id','tier_member_id','plat_search','tanggal_berakhir'
+            'memberId','kendaraan_id','tier_member_id','plat_search','tanggal_berakhir','nama','no_hp'
         ]);
         $this->dispatch('close-modal');
     }
@@ -288,6 +294,7 @@ class extends Component {
     }
 };
 ?>
+
 
 
 
@@ -432,6 +439,22 @@ class extends Component {
                         readonly
                         class="w-full bg-gray-700 border border-gray-600
                             rounded-lg px-4 py-2 text-gray-300 cursor-not-allowed"
+                </div>
+
+                {{-- NAMA --}}
+                <div>
+                    <label class="text-sm text-gray-400">Nama</label>
+                    <input type="text" wire:model="nama"
+                        class="w-full bg-[#161e25] border border-[#3E4C59] rounded-lg px-4 py-2 text-white"
+                        placeholder="Masukkan nama member">
+                </div>
+
+                {{-- NOMOR HP --}}
+                <div>
+                    <label class="text-sm text-gray-400">No. HP</label>
+                    <input type="text" wire:model="no_hp"
+                        class="w-full bg-[#161e25] border border-[#3E4C59] rounded-lg px-4 py-2 text-white"
+                        placeholder="Masukkan nomor HP">
                 </div>
 
                 {{-- SEARCH PLAT --}}

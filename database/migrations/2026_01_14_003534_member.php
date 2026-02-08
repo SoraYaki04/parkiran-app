@@ -12,6 +12,8 @@ return new class extends Migration
             $table->id();
 
             $table->string('kode_member')->unique();
+            $table->string('nama');
+            $table->string('no_hp');
 
             $table->foreignId('kendaraan_id')
                 ->unique()

@@ -2,6 +2,7 @@
 
 use App\Livewire\Actions\Logout;
 use Livewire\Volt\Component;
+use App\Models\ActivityLog;
 
 new class extends Component
 {
@@ -10,11 +11,27 @@ new class extends Component
      */
     public function logout(Logout $logout): void
     {
+        $user = auth()->user();
+
+        // LOG AKTIVITAS LOGOUT
+        if ($user) {
+            ActivityLog::create([
+                'user_id'     => $user->id,
+                'action'      => 'LOGOUT',
+                'category'    => 'AUTH',
+                'target'      => $user->username,
+                'description' => "User {$user->username} berhasil logout",
+            ]);
+        }
+
+        // Logout user
         $logout();
 
         $this->redirect('/', navigate: true);
     }
-}; ?>
+};
+?>
+
 
 <aside class="w-64 bg-sidebar-dark border-r border-gray-800 flex flex-col shrink-0">
 

@@ -13,7 +13,6 @@ return new class extends Migration
             $table->string('plat_nomor')->unique();
             $table->foreignId('tipe_kendaraan_id')
                 ->constrained('tipe_kendaraan');
-            $table->string('nama_pemilik')->nullable();
             $table->enum('status', ['aktif', 'nonaktif'])->default('aktif');
             $table->timestamps();
         });

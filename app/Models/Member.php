@@ -10,6 +10,8 @@ class Member extends Model
 
     protected $fillable = [
         'kode_member',
+        'nama',
+        'no_hp',
         'kendaraan_id',
         'tier_member_id',
         'tanggal_mulai',
