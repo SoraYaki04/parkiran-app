@@ -14,6 +14,10 @@ return new class extends Migration
             $table->string('nama_area');
             $table->string('lokasi_fisik');
             $table->integer('kapasitas_total');
+
+            $table->enum('status', ['aktif', 'maintenance'])
+                ->default('aktif');
+
             $table->timestamps();
         });
     }

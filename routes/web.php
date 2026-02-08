@@ -114,6 +114,10 @@ Route::middleware('auth')->group(function () {
         Route::get('export/rentang/pdf', [\App\Http\Controllers\LaporanExportController::class, 'pdfRentang'])->name('export.rentang.pdf');
         Route::get('export/rentang/excel', [\App\Http\Controllers\LaporanExportController::class, 'excelRentang'])->name('export.rentang.excel');
         Route::get('export/occupancy/pdf', [\App\Http\Controllers\LaporanExportController::class, 'pdfOccupancy'])->name('export.occupancy.pdf');
+
+        // ? Loh Aktivitas
+        Volt::route('log_aktivitas', 'pages.admin.log_aktivitas.index')
+            ->name('log_aktivitas.index');
         
     });
     

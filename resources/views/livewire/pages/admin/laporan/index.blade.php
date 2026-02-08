@@ -10,6 +10,7 @@ use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
+use App\Models\ActivityLog;
 
 new #[Layout('layouts.app')]
 #[Title('Laporan')]
@@ -31,6 +32,96 @@ class extends Component {
         $this->tanggalAkhir = Carbon::today()->format('Y-m-d');
     }
 
+    /* ======================
+        ACTIVITY LOGGER
+    =======================*/
+    private function logActivity(
+        string $action,
+        string $description,
+        string $target = null,
+        string $category = 'LAPORAN'
+    ) {
+        ActivityLog::create([
+            'user_id'     => auth()->id(),
+            'action'      => $action,
+            'category'    => $category,
+            'target'      => $target,
+            'description' => $description,
+        ]);
+    }
+
+    public function exportHarianPdf()
+    {
+
+        if ($this->activeTab === 'occupancy') {
+            return;
+        }
+
+        $this->logActivity(
+            'EXPORT',
+            'Export laporan harian PDF',
+            $this->tanggalHarian
+        );
+
+        return redirect()->route('admin.export.harian.pdf', [
+            'tanggal' => $this->tanggalHarian
+        ]);
+    }
+
+    public function exportHarianExcel()
+    {
+
+        if ($this->activeTab === 'occupancy') {
+            return;
+        }
+
+        $this->logActivity(
+            'EXPORT',
+            'Export laporan harian Excel',
+            $this->tanggalHarian
+        );
+
+        return redirect()->route('admin.export.harian.excel', [
+            'tanggal' => $this->tanggalHarian
+        ]);
+    }
+
+    public function exportRentangPdf()
+    {
+
+        if ($this->activeTab === 'occupancy') {
+            return;
+        }
+
+        $this->logActivity(
+            'EXPORT',
+            'Export laporan rentang PDF',
+            "{$this->tanggalMulai} s/d {$this->tanggalAkhir}"
+        );
+
+        return redirect()->route('admin.export.rentang.pdf', [
+            'mulai' => $this->tanggalMulai,
+            'akhir' => $this->tanggalAkhir
+        ]);
+    }
+
+    public function exportRentangExcel()
+    {
+        if ($this->activeTab === 'occupancy') {
+            return;
+        }
+
+        $this->logActivity(
+            'EXPORT',
+            'Export laporan rentang Excel',
+            "{$this->tanggalMulai} s/d {$this->tanggalAkhir}"
+        );
+
+        return redirect()->route('admin.export.rentang.excel', [
+            'mulai' => $this->tanggalMulai,
+            'akhir' => $this->tanggalAkhir
+        ]);
+    }
 
     /* ======================
         DATA LAPORAN HARIAN
@@ -197,7 +288,9 @@ class extends Component {
         {{-- EXPORT DROPDOWN --}}
         <div x-data="{ open: false }" class="relative">
             <button @click="open = !open" @click.away="open = false"
-                class="flex items-center gap-2 bg-primary text-black px-4 py-2 rounded-lg font-bold text-sm shadow-lg shadow-primary/20">
+                class="{{ $activeTab === 'occupancy' ? 'opacity-50 cursor-not-allowed' : '' }} flex items-center gap-2 bg-primary text-black px-4 py-2 rounded-lg font-bold text-sm shadow-lg shadow-primary/20"
+                @if($activeTab === 'occupancy') disabled @endif
+                >
                 <span class="material-symbols-outlined text-lg">download</span>
                 Export
                 <span class="material-symbols-outlined text-sm">expand_more</span>
@@ -206,19 +299,31 @@ class extends Component {
             <div x-show="open" x-transition 
                 class="absolute right-0 mt-2 w-48 bg-[#1A202C] border border-[#3E4C59] rounded-xl shadow-2xl z-50 overflow-hidden">
                 @if($activeTab === 'harian')
-                    <a href="{{ route('admin.export.harian.pdf', ['tanggal' => $tanggalHarian]) }}" class="flex items-center gap-3 px-4 py-3 text-white hover:bg-white/5 transition text-sm">
-                        <span class="material-symbols-outlined text-red-400">picture_as_pdf</span> PDF Harian
-                    </a>
-                    <a href="{{ route('admin.export.harian.excel', ['tanggal' => $tanggalHarian]) }}" class="flex items-center gap-3 px-4 py-3 text-white hover:bg-white/5 transition text-sm border-t border-gray-800">
-                        <span class="material-symbols-outlined text-green-400">table_chart</span> Excel Harian
-                    </a>
+                    <button wire:click="exportHarianPdf"
+                        class="w-full text-left flex items-center gap-3 px-4 py-3 text-white hover:bg-white/5 transition text-sm">
+                        <span class="material-symbols-outlined text-red-400">picture_as_pdf</span>
+                        PDF Harian
+                    </button>
+
+                    <button wire:click="exportHarianExcel"
+                        class="w-full text-left flex items-center gap-3 px-4 py-3 text-white hover:bg-white/5 transition text-sm border-t border-gray-800">
+                        <span class="material-symbols-outlined text-green-400">table_chart</span>
+                        Excel Harian
+                    </button>
+
                 @elseif($activeTab === 'rentang')
-                    <a href="{{ route('admin.export.rentang.pdf', ['mulai' => $tanggalMulai, 'akhir' => $tanggalAkhir]) }}" class="flex items-center gap-3 px-4 py-3 text-white hover:bg-white/5 transition text-sm">
-                        <span class="material-symbols-outlined text-red-400">picture_as_pdf</span> PDF Rentang
-                    </a>
-                    <a href="{{ route('admin.export.rentang.excel', ['mulai' => $tanggalMulai, 'akhir' => $tanggalAkhir]) }}" class="flex items-center gap-3 px-4 py-3 text-white hover:bg-white/5 transition text-sm border-t border-gray-800">
-                        <span class="material-symbols-outlined text-green-400">table_chart</span> Excel Rentang
-                    </a>
+                    <button wire:click="exportRentangPdf"
+                        class="w-full text-left flex items-center gap-3 px-4 py-3 text-white hover:bg-white/5 transition text-sm">
+                        <span class="material-symbols-outlined text-red-400">picture_as_pdf</span>
+                        PDF Rentang
+                    </button>
+
+                    <button wire:click="exportRentangExcel"
+                        class="w-full text-left flex items-center gap-3 px-4 py-3 text-white hover:bg-white/5 transition text-sm">
+                        <span class="material-symbols-outlined text-green-400">table_chart</span>
+                        Excel Rentang
+                    </button>
+
                 @endif
             </div>
         </div>
@@ -267,7 +372,9 @@ class extends Component {
             @endif
 
             @if($activeTab === 'occupancy')
-                <div class="px-4 py-1.5 text-[10px] font-bold text-primary uppercase tracking-tighter italic">
+                <div
+                    wire:poll.5s
+                    class="px-4 py-1.5 text-[10px] font-bold text-primary uppercase tracking-tighter italic">
                     Real-time Data Terupdate
                 </div>
             @endif

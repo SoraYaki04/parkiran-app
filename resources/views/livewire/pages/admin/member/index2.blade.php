@@ -1,13 +1,16 @@
 <?php
 
 use App\Models\TierMember;
+use App\Models\ActivityLog;
 use Livewire\Volt\Component;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
+use Livewire\WithPagination;
 
 new #[Layout('layouts.app')]
 #[Title('Tier Member')]
 class extends Component {
+    use WithPagination;
 
     public $tierId;
 
@@ -22,8 +25,30 @@ class extends Component {
     public $isEdit = false;
 
     /* ===============================
+        ACTIVITY LOGGER
+    =============================== */
+    private function logActivity(
+        string $action,
+        string $description,
+        string $target = null,
+        string $category = 'MASTER'
+    ) {
+        ActivityLog::create([
+            'user_id'     => auth()->id(),
+            'action'      => $action,
+            'category'    => $category,
+            'target'      => $target,
+            'description' => $description,
+        ]);
+    }
+
+    /* ===============================
         DATA
     =============================== */
+    public function updatedSearch()
+    {
+        $this->resetPage();
+    }
 
     public function getTierMembersProperty()
     {
@@ -32,13 +57,12 @@ class extends Component {
                 $q->where('nama', 'like', "%{$this->search}%")
             )
             ->orderBy('harga')
-            ->get();
+            ->paginate(10); 
     }
 
     /* ===============================
         ACTIONS
     =============================== */
-
     public function create()
     {
         $this->resetForm();
@@ -72,7 +96,7 @@ class extends Component {
             'status'            => 'required|in:aktif,nonaktif',
         ]);
 
-        TierMember::updateOrCreate(
+        $tier = TierMember::updateOrCreate(
             ['id' => $this->tierId],
             [
                 'nama'              => $this->nama,
@@ -83,13 +107,59 @@ class extends Component {
             ]
         );
 
+        if ($this->isEdit) {
+            $this->logActivity(
+                'UPDATE_TIER_MEMBER',
+                'Memperbarui tier member',
+                "ID {$tier->id} ({$tier->nama})"
+            );
+
+            $this->dispatch('notify',
+                message: 'Tier member berhasil diperbarui!',
+                type: 'success'
+            );
+        } else {
+            $this->logActivity(
+                'CREATE_TIER_MEMBER',
+                'Menambahkan tier member baru',
+                "ID {$tier->id} ({$tier->nama})"
+            );
+
+            $this->dispatch('notify',
+                message: 'Tier member berhasil ditambahkan!',
+                type: 'success'
+            );
+        }
+
         $this->resetForm();
         $this->dispatch('close-modal');
     }
 
     public function delete($id)
     {
-        TierMember::findOrFail($id)->delete();
+        $tier = TierMember::findOrFail($id);
+
+        if ($tier->members()->exists()) {
+            $this->dispatch('notify',
+                message: 'Tier member tidak bisa dihapus karena masih digunakan oleh member!',
+                type: 'error'
+            );
+            return;
+        }
+
+        // LOG SEBELUM DELETE
+        $this->logActivity(
+            'DELETE_TIER_MEMBER',
+            'Menghapus tier member',
+            "ID {$tier->id} ({$tier->nama})"
+        );
+
+        $tier->delete();
+
+        $this->dispatch('notify',
+            message: 'Tier member berhasil dihapus!',
+            type: 'success'
+        );
     }
 
     private function resetForm()
@@ -100,11 +170,14 @@ class extends Component {
             'harga',
             'periode',
             'diskon_persen',
+            'masa_berlaku_hari',
             'status',
         ]);
     }
 };
 ?>
+
+
 
 <div class="flex-1 flex flex-col h-full overflow-hidden"
      x-data="{ open: false }"
@@ -152,6 +225,9 @@ class extends Component {
 
                 <tbody class="divide-y divide-[#3E4C59]">
                     @forelse($this->tierMembers as $tier)
+                    @php
+                        $isUsed = $tier->members()->exists(); 
+                    @endphp                    
                         <tr class="hover:bg-surface-hover">
                             <td class="px-6 py-4 text-white font-semibold">
                                 {{ $tier->nama }}
@@ -184,9 +260,18 @@ class extends Component {
                                     <span class="material-symbols-outlined">edit</span>
                                 </button>
 
-                                <button wire:click="delete({{ $tier->id }})"
-                                        onclick="return confirm('Hapus tier ini?')"
-                                        class="text-red-400 p-2">
+                                <button
+                                    wire:click="delete({{ $tier->id }})"
+                                    onclick="return confirm('Hapus tier ini?')"
+                                    @if($isUsed) disabled @endif
+                                    class="
+                                        p-2
+                                        {{ $isUsed 
+                                            ? 'text-gray-500 cursor-not-allowed' 
+                                            : 'text-red-400 hover:text-red-500' 
+                                        }}"
+                                    title="{{ $isUsed ? 'Tier ini masih digunakan oleh member' : 'Hapus' }}"
+                                >
                                     <span class="material-symbols-outlined">delete</span>
                                 </button>
                             </td>
@@ -201,8 +286,11 @@ class extends Component {
                 </tbody>
             </table>
         </div>
+        
+        <div class="mt-4 px-8">
+            {{ $this->tierMembers->links() }}
+        </div>
     </div>
-
     {{-- MODAL --}}
     <div x-show="open" x-transition class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
         <div class="bg-card-dark w-full max-w-md p-6 rounded-xl">
@@ -211,30 +299,45 @@ class extends Component {
             </h3>
 
             <form wire:submit.prevent="save" class="space-y-3">
-                <input wire:model="nama"
-                       class="w-full bg-[#161e25] border border-[#3E4C59] rounded-lg px-4 py-2 text-white"
-                       placeholder="Tier name (Silver, Gold...)">
+                <div>
+                    <label class="text-sm text-gray-400">Nama Tier</label>
+                    <input wire:model="nama"
+                           class="w-full bg-[#161e25] border border-[#3E4C59] rounded-lg px-4 py-2 text-white"
+                           placeholder="Nama Tier (Silver, Gold...)">
+                </div>
 
-                <input wire:model="harga" type="number"
-                       class="w-full bg-[#161e25] border border-[#3E4C59] rounded-lg px-4 py-2 text-white"
-                       placeholder="Harga">
+                <div>
+                    <label class="text-sm text-gray-400">Harga (Rupiah)</label>
+                    <input wire:model="harga" type="number"
+                           class="w-full bg-[#161e25] border border-[#3E4C59] rounded-lg px-4 py-2 text-white"
+                           placeholder="Harga Member">
+                </div>
 
-                <select wire:model="periode"
-                        class="w-full bg-[#161e25] border border-[#3E4C59] rounded-lg px-4 py-2 text-white">
-                    <option value="">Select Periode</option>
-                    <option value="bulanan">Bulanan</option>
-                    <option value="tahunan">Tahunan</option>
-                </select>
+                <div>
+                    <label class="text-sm text-gray-400">Periode</label>
+                    <select wire:model="periode"
+                            class="w-full bg-[#161e25] border border-[#3E4C59] rounded-lg px-4 py-2 text-white">
+                            <option value="">Select Periode</option>
+                            <option value="bulanan">Bulanan</option>
+                            <option value="tahunan">Tahunan</option>
+                    </select>
+                </div>
 
-                <input wire:model="diskon_persen" type="number"
-                       class="w-full bg-[#161e25] border border-[#3E4C59] rounded-lg px-4 py-2 text-white"
-                       placeholder="Diskon (%)">
+                <div>
+                    <label class="text-sm text-gray-400">Diskon (%)</label>
+                    <input wire:model="diskon_persen" type="number"
+                           class="w-full bg-[#161e25] border border-[#3E4C59] rounded-lg px-4 py-2 text-white"
+                           placeholder="Diskon Member">
+                </div>
 
-                <select wire:model="status"
-                        class="w-full bg-[#161e25] border border-[#3E4C59] rounded-lg px-4 py-2 text-white">
-                    <option value="aktif">Aktif</option>
-                    <option value="nonaktif">Nonaktif</option>
-                </select>
+                <div>
+                    <label class="text-sm text-gray-400">Status</label>
+                    <select wire:model="status"
+                            class="w-full bg-[#161e25] border border-[#3E4C59] rounded-lg px-4 py-2 text-white">
+                        <option value="aktif">Aktif</option>
+                        <option value="nonaktif">Nonaktif</option>
+                    </select>
+                </div>
 
                 <div class="flex justify-end gap-2 pt-4">
                     <button type="button"
@@ -243,7 +346,9 @@ class extends Component {
                         Batal
                     </button>
 
-                    <button class="bg-primary px-5 py-2 rounded-lg font-bold text-black">
+                    <button
+                        wire:loading.attr="disabled"
+                        class="bg-primary px-4 py-2 rounded-lg font-bold text-black disabled:opacity-60">
                         Simpan
                     </button>
                 </div>

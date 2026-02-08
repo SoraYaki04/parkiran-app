@@ -14,5 +14,12 @@ class TipeKendaraan extends Model
     ];
 
     public $timestamps = false;
+
+    public function areaKapasitas()
+    {
+        return $this->hasMany(\App\Models\AreaKapasitas::class, 'tipe_kendaraan_id');
+    }
 }
+
+
 

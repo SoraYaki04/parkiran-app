@@ -37,7 +37,7 @@ class PilihSlot extends Component
             ->where('expired_at', '>', now())
             ->first();
 
-        if (!$this->session) {
+        if (! $this->session) {
             $this->invalidSession = true;
             $this->errorMessage = 'QR tidak valid / expired';
             return;
@@ -47,7 +47,11 @@ class PilihSlot extends Component
             $this->session->update(['status' => 'SCANNED']);
         }
 
-        $this->areas = AreaParkir::withCount('slots')
+        /**
+         * 🔥 HANYA AREA AKTIF YANG DITAMPILKAN
+         */
+        $this->areas = AreaParkir::where('status', 'aktif')
+            ->withCount('slots')
             ->orderBy('nama_area')
             ->get();
 
@@ -59,15 +63,32 @@ class PilihSlot extends Component
     ===================== */
     public function selectArea($areaId)
     {
+        /**
+         * 🔐 PROTEKSI BACKEND
+         * Area harus AKTIF
+         */
+        $area = AreaParkir::where('id', $areaId)
+            ->where('status', 'aktif')
+            ->first();
+
+        if (! $area) {
+            $this->errorMessage = 'Area parkir tidak tersedia atau sedang maintenance';
+            $this->selectedAreaId = null;
+            $this->slots = collect();
+            return;
+        }
+
         $this->selectedAreaId = $areaId;
         $this->slotId = null;
 
+        /**
+         * Ambil slot sesuai area + tipe kendaraan
+         */
         $this->slots = SlotParkir::where('area_id', $areaId)
             ->where('tipe_kendaraan_id', $this->session->tipe_kendaraan_id)
             ->orderBy('baris')
             ->orderBy('kolom')
             ->get();
-
     }
 
     /* =====================
@@ -94,7 +115,7 @@ class PilihSlot extends Component
         $input = strtoupper(trim($input));
         $input = preg_replace('/[^A-Z0-9]/', '', $input);
 
-        if (!preg_match('/^([A-Z]{1,2})(\d{1,5})([A-Z]{0,3})$/', $input, $m)) {
+        if (! preg_match('/^([A-Z]{1,2})(\d{1,5})([A-Z]{0,3})$/', $input, $m)) {
             throw new \Exception('Format plat tidak valid');
         }
 
@@ -106,7 +127,7 @@ class PilihSlot extends Component
     ===================== */
     public function confirm()
     {
-        if (!$this->selectedAreaId || !$this->slotId || !$this->platNomor) {
+        if (! $this->selectedAreaId || ! $this->slotId || ! $this->platNomor) {
             $this->errorMessage = 'Data belum lengkap';
             return;
         }
@@ -129,14 +150,17 @@ class PilihSlot extends Component
 
         DB::transaction(function () use ($exitToken, $platFormatted) {
 
+            /**
+             * 🔐 LOCK SLOT
+             */
             $slot = SlotParkir::where('id', $this->slotId)
                 ->where('area_id', $this->selectedAreaId)
                 ->where('status', 'kosong')
                 ->lockForUpdate()
                 ->firstOrFail();
 
-            // ⬇️ JANGAN sentuh status kendaraan
-            $kendaraan = Kendaraan::updateOrCreate(
+            // Simpan / update kendaraan
+            Kendaraan::updateOrCreate(
                 ['plat_nomor' => $platFormatted],
                 [
                     'tipe_kendaraan_id' => $this->session->tipe_kendaraan_id,
@@ -144,6 +168,7 @@ class PilihSlot extends Component
                 ]
             );
 
+            // Update session parkir
             $this->session->update([
                 'slot_parkir_id' => $slot->id,
                 'plat_nomor'     => $platFormatted,
@@ -152,6 +177,7 @@ class PilihSlot extends Component
                 'exit_token'     => $exitToken,
             ]);
 
+            // Tandai slot terisi
             $slot->update(['status' => 'terisi']);
         });
 

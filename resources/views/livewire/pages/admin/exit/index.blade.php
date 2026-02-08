@@ -9,6 +9,7 @@ use App\Models\Pembayaran;
 use App\Models\SlotParkir;
 use App\Models\Kendaraan;
 use App\Models\Member;
+use App\Models\ActivityLog;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
@@ -45,6 +46,24 @@ class extends Component
     public function mount()
     {
         $this->loadRecentExits();
+    }
+
+    /* ======================
+        ACTIVITY LOGGER
+    =======================*/
+    private function logActivity(
+        string $action,
+        string $description,
+        string $target = null,
+        string $category = 'TRANSAKSI'
+    ) {
+        ActivityLog::create([
+            'user_id'     => auth()->id(),
+            'action'      => $action,
+            'category'    => $category,
+            'target'      => $target,
+            'description' => $description,
+        ]);
     }
 
     public function loadRecentExits()
@@ -139,6 +158,12 @@ class extends Component
         $this->struk .= "Metode: {$labelMetode}\n";
         $this->struk .= "Tanggal: " . now()->format('d-m-Y') . "\n";
         $this->struk .= "Operator: {$operator}\n";
+
+        $this->logActivity(
+            'GENERATE_STRUK',
+            "Struk parkir di-generate. Plat: {$kendaraan->plat_nomor}, Total Bayar: Rp ".number_format($this->totalBayarFinal,0,',','.').", Metode: ".strtoupper($this->paymentMethod),
+            "Parkir Session ID: {$this->session->id}"
+        );
     }
 
 
@@ -263,30 +288,30 @@ class extends Component
         $this->generateStruk();
     }
 
-    public function finalizeExit()
-    {
-        if (!$this->session) return;
+public function finalizeExit()
+{
+    if (!$this->session) return;
 
-        $kendaraan = Kendaraan::where('plat_nomor', $this->session->plat_nomor)
-            ->where('status', 'aktif')
-            ->firstOrFail();
+    $kendaraan = Kendaraan::where('plat_nomor', $this->session->plat_nomor)
+        ->where('status', 'aktif')
+        ->firstOrFail();
 
-        $operator = Auth::user()->name;
+    $operator = Auth::user()->name;
 
-        DB::transaction(function () use ($kendaraan, $operator) {
-            $transaksi = TransaksiParkir::create([
-                'kode_karcis'        => 'OUT-' . strtoupper(Str::random(8)),
-                'parkir_session_id'  => $this->session->id,
-                'kendaraan_id'       => $kendaraan->id,
-                'slot_parkir_id'     => $this->session->slot_parkir_id,
-                'tipe_kendaraan_id'  => $this->session->tipe_kendaraan_id,
-                'waktu_masuk'        => $this->session->confirmed_at,
-                'waktu_keluar'       => now(),
-                'durasi_menit'       => $this->durationMinutes,
-                'total_bayar'        => $this->totalBayarFinal,
-                'member_id'          => $this->member?->id,
-                'operator'           => $operator,
-            ]);
+    DB::transaction(function () use ($kendaraan, $operator) {
+        $transaksi = TransaksiParkir::create([
+            'kode_karcis'        => 'OUT-' . strtoupper(Str::random(8)),
+            'parkir_session_id'  => $this->session->id,
+            'kendaraan_id'       => $kendaraan->id,
+            'slot_parkir_id'     => $this->session->slot_parkir_id,
+            'tipe_kendaraan_id'  => $this->session->tipe_kendaraan_id,
+            'waktu_masuk'        => $this->session->confirmed_at,
+            'waktu_keluar'       => now(),
+            'durasi_menit'       => $this->durationMinutes,
+            'total_bayar'        => $this->totalBayarFinal,
+            'member_id'          => $this->member?->id,
+            'operator'           => $operator,
+        ]);
 
         Pembayaran::create([
             'transaksi_parkir_id' => $transaksi->id,
@@ -298,22 +323,30 @@ class extends Component
             'tanggal_bayar'       => now(),
         ]);
 
+        SlotParkir::where('id', $this->session->slot_parkir_id)
+            ->update(['status' => 'kosong']);
 
-            SlotParkir::where('id', $this->session->slot_parkir_id)
-                ->update(['status' => 'kosong']);
+        $this->session->update(['status' => 'FINISHED']);
+        $kendaraan->update(['slot_parkir_id' => null]);
 
-            $this->session->update(['status' => 'FINISHED']);
-            $kendaraan->update(['slot_parkir_id' => null]);
-        });
+        // ============================
+        // LOG AKTIVITAS TRANSAKSI KELUAR
+        // ============================
+        $memberInfo = $this->member ? ", Member: {$this->member->tier->nama}" : "";
+        $this->logActivity(
+            'EXIT_PARKIR',
+            "Kendaraan keluar. Plat: {$kendaraan->plat_nomor}, Durasi: {$this->durasiJam}j {$this->durasiMenit}m, Total Bayar: Rp ".number_format($this->totalBayarFinal,0,',','.').", Metode: ".strtoupper($this->paymentMethod).$memberInfo,
+            "Transaksi ID: {$transaksi->id}"
+        );
+    });
 
-        $this->loadRecentExits();
-        $this->resetSession();
+    $this->loadRecentExits();
+    $this->resetSession();
 
-        
-        $this->dispatch('exit-success');
+    $this->dispatch('exit-success');
+    session()->flash('success', 'Transaksi parkir selesai & gate terbuka!');
+}
 
-        session()->flash('success', 'Transaksi parkir selesai & gate terbuka!');
-    }
 
     public function resetSession()
     {

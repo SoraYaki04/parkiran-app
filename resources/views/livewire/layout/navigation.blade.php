@@ -167,6 +167,17 @@ new class extends Component
             Laporan
         </a>
 
+        {{-- LOG AKTIVITAS --}}
+        <a href="{{ route('admin.log_aktivitas.index') }}" wire:navigate.preserve-scroll
+
+           class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all
+           {{ request()->routeIs('admin.log_aktivitas.*')
+                ? 'bg-primary/10 border-l-4 border-primary text-white'
+                : 'text-gray-400 hover:bg-gray-800 hover:text-white' }}">
+            <span class="material-symbols-outlined">search_activity</span>
+            Log Aktivitas
+        </a>
+
         <div class="pt-4 mt-4 border-t border-gray-800">
         <p class="px-4 text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">System</p>
 

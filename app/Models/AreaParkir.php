@@ -12,8 +12,13 @@ class AreaParkir extends Model
         'kode_area',
         'nama_area',
         'lokasi_fisik',
-        'kapasitas_total'
+        'kapasitas_total',
+        'status', // <-- WAJIB ditambahkan
     ];
+
+    /* ==========================
+     | RELATIONS
+     ========================== */
 
     public function kapasitas()
     {
@@ -24,15 +29,4 @@ class AreaParkir extends Model
     {
         return $this->hasMany(SlotParkir::class, 'area_id');
     }
-
-    public function getStatusAttribute()
-    {
-        $total = $this->slots()->count();
-        $terisi = $this->slots()->where('status', 'terisi')->count();
-
-        if ($total === 0) return 'Maintenance';
-        if ($terisi >= $total) return 'Full';
-        return 'Available';
-    }
-
 }

@@ -3,6 +3,7 @@
 use App\Models\Member;
 use App\Models\TierMember;
 use App\Models\Kendaraan;
+use App\Models\ActivityLog;
 use Livewire\Volt\Component;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
@@ -13,19 +14,42 @@ new #[Layout('layouts.app')]
 class extends Component {
 
     public $memberId;
-
     public $kode_member;
     public $kendaraan_id;
     public $tier_member_id;
     public $tanggal_mulai;
     public $tanggal_berakhir;
     public $status = 'aktif';
-    public $search = '';
-    public $filterTier = '';
-
     public $plat_search = '';
     public $isEdit = false;
     public $showDropdown = false;
+
+    public string $search = '';
+    public string $filterTier = '';
+    public string $filterStatus = '';
+
+    public function mount()
+    {
+        $this->autoExpireMember();
+    }
+
+    /* ===============================
+        ACTIVITY LOGGER
+    =============================== */
+    private function logActivity(
+        string $action,
+        string $description,
+        string $target = null,
+        string $category = 'MASTER'
+    ) {
+        ActivityLog::create([
+            'user_id'     => auth()->id(),
+            'action'      => $action,
+            'category'    => $category,
+            'target'      => $target,
+            'description' => $description,
+        ]);
+    }
 
     /* ===============================
         AUTO EXPIRED
@@ -35,35 +59,45 @@ class extends Component {
         Member::where('status', 'aktif')
             ->whereNotNull('tanggal_berakhir')
             ->whereDate('tanggal_berakhir', '<', now())
-            ->update([
-                'status' => 'expired',
-            ]);
+            ->update(['status' => 'expired']);
     }
-
 
     /* ===============================
-        DATA
+        COMPUTED DATA
     =============================== */
-    public function getMembersProperty()
-    {
-        $this->autoExpireMember();
 
-        return Member::with(['kendaraan','tier'])
-            // Filter berdasarkan search kode member / plat nomor
-            ->when($this->search, function ($q) {
-                $q->where('kode_member', 'like', "%{$this->search}%")
-                ->orWhereHas('kendaraan', fn ($k) =>
-                    $k->where('plat_nomor', 'like', "%{$this->search}%")
-                );
-            })
-            // Filter tier MEMBER TERPISAH
-            ->when($this->filterTier, function ($q) {
-                $q->where('tier_member_id', $this->filterTier);
-            })
-            ->latest()
-            ->get();
+   public function updated($property)
+    {
+        if (in_array($property, [
+            'search',
+            'filterTier',
+            'filterStatus',
+        ])) {
+            $this->resetPage();
+        }
     }
 
+
+    public function getMembersProperty()
+    {
+        return Member::with(['kendaraan', 'tier'])
+            ->when($this->search, function ($q) {
+                $q->where(function ($sub) {
+                    $sub->where('kode_member', 'like', "%{$this->search}%")
+                        ->orWhereHas('kendaraan', function ($k) {
+                            $k->where('plat_nomor', 'like', "%{$this->search}%");
+                        });
+                });
+            })
+            ->when($this->filterTier, function ($q) {
+                $q->where('tier_id', $this->filterTier);
+            })
+            ->when($this->filterStatus, function ($q) {
+                $q->where('status', $this->filterStatus);
+            })
+            ->orderBy('created_at', 'desc')
+            ->paginate(10);
+    }
 
 
     public function getTiersProperty()
@@ -94,22 +128,14 @@ class extends Component {
     {
         $this->kendaraan_id = $id;
         $this->plat_search = $plat;
-
         $this->showDropdown = false;
     }
 
     /* ===============================
         LOGIC TANGGAL
     =============================== */
-    public function updatedTierMemberId()
-    {
-        $this->hitungTanggalBerakhir();
-    }
-
-    public function updatedTanggalMulai()
-    {
-        $this->hitungTanggalBerakhir();
-    }
+    public function updatedTierMemberId() { $this->hitungTanggalBerakhir(); }
+    public function updatedTanggalMulai() { $this->hitungTanggalBerakhir(); }
 
     private function hitungTanggalBerakhir()
     {
@@ -130,16 +156,13 @@ class extends Component {
     }
 
     /* ===============================
-        ACTION
+        CREATE
     =============================== */
     public function create()
     {
         $this->reset([
-            'memberId',
-            'kendaraan_id',
-            'tier_member_id',
-            'plat_search',
-            'tanggal_berakhir',
+            'memberId', 'kendaraan_id', 'tier_member_id',
+            'plat_search','tanggal_berakhir'
         ]);
 
         $this->tanggal_mulai = now()->toDateString();
@@ -151,6 +174,9 @@ class extends Component {
         $this->dispatch('open-modal');
     }
 
+    /* ===============================
+        EDIT
+    =============================== */
     public function edit($id)
     {
         $m = Member::with('kendaraan')->findOrFail($id);
@@ -170,12 +196,31 @@ class extends Component {
         $this->dispatch('open-modal');
     }
 
+    /* ===============================
+        DELETE
+    =============================== */
     public function delete($id)
     {
-        Member::findOrFail($id)->delete();
+        $member = Member::findOrFail($id);
+
+        // LOG SEBELUM DELETE
+        $this->logActivity(
+            'DELETE_MEMBER',
+            'Menghapus member',
+            "ID {$member->id} ({$member->kode_member})"
+        );
+
+        $member->delete();
+
+        $this->dispatch('notify',
+            message: 'Member berhasil dihapus!',
+            type: 'success'
+        );
     }
 
-
+    /* ===============================
+        SAVE
+    =============================== */
     public function save()
     {
         $rules = [
@@ -183,14 +228,13 @@ class extends Component {
             'tier_member_id' => 'required|exists:tier_member,id',
         ];
 
-        // validasi unik hanya saat create
         if (!$this->isEdit) {
             $rules['kendaraan_id'] .= '|unique:member,kendaraan_id';
         }
 
         $this->validate($rules);
 
-        Member::updateOrCreate(
+        $member = Member::updateOrCreate(
             ['id' => $this->memberId],
             [
                 'kode_member'      => $this->kode_member,
@@ -199,16 +243,34 @@ class extends Component {
                 'tanggal_mulai'    => $this->tanggal_mulai,
                 'tanggal_berakhir' => $this->tanggal_berakhir,
                 'status' => $this->isEdit ? $this->status : 'aktif',
-
             ]
         );
 
+        // LOG & NOTIFIKASI
+        if ($this->isEdit) {
+            $this->logActivity(
+                'UPDATE_MEMBER',
+                'Update data member',
+                "ID {$member->id} ({$member->kode_member})"
+            );
+            $this->dispatch('notify', message: 'Member berhasil diperbarui!', type: 'success');
+        } else {
+            $this->logActivity(
+                'CREATE_MEMBER',
+                'Menambahkan member baru',
+                "ID {$member->id} ({$member->kode_member})"
+            );
+            $this->dispatch('notify', message: 'Member baru berhasil ditambahkan!', type: 'success');
+        }
+
+        $this->reset([
+            'memberId','kendaraan_id','tier_member_id','plat_search','tanggal_berakhir'
+        ]);
         $this->dispatch('close-modal');
     }
 
-
     /* ===============================
-        KODE MEMBER
+        GENERATE KODE MEMBER
     =============================== */
     private function generateKodeMember()
     {
@@ -226,6 +288,7 @@ class extends Component {
     }
 };
 ?>
+
 
 
 
@@ -249,7 +312,7 @@ class extends Component {
     </header>
 
     {{-- SEARCH --}}
-    <div class="px-8 pt-6">
+    <div class="px-8 pt-6 flex-shrink-0">
         <div class="bg-surface-dark p-5 rounded-xl border border-[#3E4C59]">
             <div class="flex flex-col md:flex-row gap-4">
                 <input wire:model.live="search"
@@ -267,14 +330,11 @@ class extends Component {
         </div>
     </div>
 
-
-
-
     {{-- TABLE --}}
     <div class="flex-1 overflow-y-auto px-8 py-6">
-        <div class="bg-surface-dark border border-[#3E4C59] rounded-xl overflow-hidden">
+        <div class="bg-surface-dark border border-[#3E4C59] rounded-xl overflow-hidden min-h-[300px]">
             <table class="w-full">
-                <thead class="bg-gray-900">
+                <thead class="bg-gray-900 sticky top-0 z-10">
                     <tr>
                         <th class="px-6 py-4 text-xs text-slate-400 text-left">Member ID</th>
                         <th class="px-6 py-4 text-xs text-slate-400 text-left">Plat Nomor</th>
@@ -285,68 +345,70 @@ class extends Component {
                     </tr>
                 </thead>
 
-
                 <tbody class="divide-y divide-[#3E4C59]">
                     @forelse($this->members as $m)
-                    <tr class="group hover:bg-[#3E4C59]/30">
-                        <td class="px-6 py-4 font-mono text-slate-400 text-left">
-                            {{ $m->kode_member }}
-                        </td>
+                        <tr class="group hover:bg-[#3E4C59]/30">
+                            <td class="px-6 py-4 font-mono text-slate-400 text-left">
+                                {{ $m->kode_member }}
+                            </td>
 
-                        <td class="px-6 py-4 text-white text-left">
-                            {{ $m->kendaraan->plat_nomor }}
-                        </td>
+                            <td class="px-6 py-4 text-white text-left">
+                                {{ $m->kendaraan->plat_nomor }}
+                            </td>
 
-                        <td class="px-6 py-4 text-center">
-                            <span class="px-2 py-1 text-xs rounded-full bg-primary/10 text-primary">
-                                {{ $m->tier->nama }}
-                            </span>
-                        </td>
-
-                        <td class="px-6 py-4 text-slate-400 text-center">
-                            {{ \Carbon\Carbon::parse($m->tanggal_berakhir)->format('d M Y') }}
-                        </td>
-
-                        <td class="px-6 py-4 text-center">
-                            @if($m->status === 'aktif')
-                                <span class="px-2 py-1 text-xs rounded-full bg-green-500/10 text-green-400">
-                                    Aktif
+                            <td class="px-6 py-4 text-center">
+                                <span class="px-2 py-1 text-xs rounded-full bg-primary/10 text-primary">
+                                    {{ $m->tier->nama }}
                                 </span>
-                            @elseif($m->status === 'nonaktif')
-                                <span class="px-2 py-1 text-xs rounded-full bg-green-500/10 text-gray-400">
-                                    Nonaktif
-                                </span>
-                            @else
-                                <span class="px-2 py-1 text-xs rounded-full bg-red-500/10 text-red-400">
-                                    Expired
-                                </span>
-                            @endif
-                        </td>
+                            </td>
 
-                        <td class="px-6 py-4 flex justify-center">
-                            <div class="flex justify-end gap-2">
-                                <button wire:click="edit({{ $m->id }})" class="text-primary">
-                                    <span class="material-symbols-outlined">edit</span>
-                                </button>
-                                <button wire:click="delete({{ $m->id }})"
-                                    onclick="return confirm('Hapus member ini?')"
-                                    class="text-red-400">
-                                    <span class="material-symbols-outlined">delete</span>
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
+                            <td class="px-6 py-4 text-slate-400 text-center">
+                                {{ \Carbon\Carbon::parse($m->tanggal_berakhir)->format('d M Y') }}
+                            </td>
+
+                            <td class="px-6 py-4 text-center">
+                                @if($m->status === 'aktif')
+                                    <span class="px-2 py-1 text-xs rounded-full bg-green-500/10 text-green-400">
+                                        Aktif
+                                    </span>
+                                @elseif($m->status === 'nonaktif')
+                                    <span class="px-2 py-1 text-xs rounded-full bg-green-500/10 text-gray-400">
+                                        Nonaktif
+                                    </span>
+                                @else
+                                    <span class="px-2 py-1 text-xs rounded-full bg-red-500/10 text-red-400">
+                                        Expired
+                                    </span>
+                                @endif
+                            </td>
+
+                            <td class="px-6 py-4 flex justify-center">
+                                <div class="flex justify-end gap-2">
+                                    <button wire:click="edit({{ $m->id }})" class="text-primary">
+                                        <span class="material-symbols-outlined">edit</span>
+                                    </button>
+                                    <button wire:click="delete({{ $m->id }})"
+                                        onclick="return confirm('Hapus member ini?')"
+                                        class="text-red-400">
+                                        <span class="material-symbols-outlined">delete</span>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
                     @empty
-                    <tr>
-                        <td colspan="6" class="py-10 text-center text-slate-400">
-                            Tidak ada member ditemukan
-                        </td>
-                    </tr>
+                        <tr>
+                            <td colspan="6" class="py-10 text-center text-slate-400">
+                                Tidak ada member ditemukan
+                            </td>
+                        </tr>
                     @endforelse
                 </tbody>
 
             </table>
         </div>
+    </div>
+    <div class="mt-6">
+        {{ $this->members->links() }}
     </div>
 
     {{-- MODAL MEMBER --}}
@@ -364,15 +426,20 @@ class extends Component {
             <form wire:submit.prevent="save" class="space-y-3">
 
                 {{-- KODE MEMBER --}}
-                <input wire:model="kode_member"
-                    readonly
-                    class="w-full bg-[#161e25] border border-[#3E4C59]
-                            rounded-lg px-4 py-2 text-gray-400 cursor-not-allowed">
+                <div>
+                    <label class="text-sm text-gray-400">Kode Member</label>
+                    <input wire:model="kode_member"
+                        readonly
+                        class="w-full bg-gray-700 border border-gray-600
+                            rounded-lg px-4 py-2 text-gray-300 cursor-not-allowed"
+                </div>
 
                 {{-- SEARCH PLAT --}}
                 <div class="relative">
+                    <label class="text-sm text-gray-400">Search Plat</label>
                     <input wire:model.live="plat_search"
                         placeholder="Cari plat kendaraan..."
+                        oninput="formatPlatLivewire(this)"
                         class="w-full bg-[#161e25] border border-[#3E4C59]
                                 rounded-lg px-4 py-2 text-white">
 
@@ -392,32 +459,33 @@ class extends Component {
                     @endif
                 </div>
 
+
                 {{-- TIER --}}
-                <select wire:model="tier_member_id"
-                        class="w-full bg-[#161e25] border border-[#3E4C59]
-                            rounded-lg px-4 py-2 text-white">
-                    <option value="">Pilih Tier</option>
-                    @foreach($this->tiers as $t)
-                        <option value="{{ $t->id }}">{{ $t->nama }}</option>
-                    @endforeach
-                </select>
+                <div>
+                    <label class="text-sm text-gray-400">Pilih Tier</label>
+                    <select wire:model="tier_member_id"
+                            class="w-full bg-[#161e25] border border-[#3E4C59]
+                                rounded-lg px-4 py-2 text-white">
+                        <option value="">Pilih Tier</option>
+                        @foreach($this->tiers as $t)
+                            <option value="{{ $t->id }}">{{ $t->nama }}</option>
+                        @endforeach
+                    </select>
+                </div>
 
                 {{-- TANGGAL MULAI --}}
-                <input type="date"
-                    wire:model="tanggal_mulai"
-                    readonly
-                    class="w-full bg-[#161e25] border border-[#3E4C59]
-                            rounded-lg px-4 py-2 text-white">
-
-                {{-- TANGGAL BERAKHIR --}}
-                <input type="date"
-                    wire:model="tanggal_berakhir"
-                    readonly
-                    class="w-full bg-[#161e25] border border-[#3E4C59]
-                            rounded-lg px-4 py-2 text-gray-400">
+                <div>
+                    <label class="text-sm text-gray-400">Tanggal Mulai (Sekarang)</label>
+                    <input type="date"
+                        wire:model="tanggal_mulai"
+                        readonly
+                        class="w-full bg-gray-700 border border-gray-600
+                            rounded-lg px-4 py-2 text-gray-300 cursor-not-allowed"
+                </div>
 
                 {{-- STATUS (HANYA SAAT EDIT) --}}
                 @if($isEdit)
+                    <label class="text-sm text-gray-400">Status</label>
                     <select wire:model="status"
                             class="w-full bg-[#161e25] border border-[#3E4C59]
                                 rounded-lg px-4 py-2 text-white">
@@ -435,7 +503,9 @@ class extends Component {
                         Batal
                     </button>
 
-                    <button class="bg-primary px-5 py-2 rounded-lg font-bold text-black">
+                    <button
+                        wire:loading.attr="disabled"
+                        class="bg-primary px-4 py-2 rounded-lg font-bold text-black disabled:opacity-60">
                         Simpan
                     </button>
                 </div>
@@ -444,5 +514,5 @@ class extends Component {
         </div>
     </div>
 
+</div>
 
-    </div>
