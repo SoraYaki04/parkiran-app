@@ -15,7 +15,7 @@ class extends Component {
     use WithPagination;
 
     public ?int $areaId = null;
-    public ?string $hari = null;   // ✅ ganti dari $tanggal → $hari
+    public ?string $hari = null; 
     public ?int $bulan = null;
     public ?int $tahun = null;
 
@@ -54,7 +54,7 @@ class extends Component {
     =======================*/
     public function getParkirBerjalanProperty()
     {
-        return ParkirSessions::with(['tipeKendaraan', 'slotParkir.area'])
+        return ParkirSessions::with(['tipeKendaraan', 'slot.area'])
             ->when($this->areaId, function ($q) {
                 $q->whereHas('slotParkir', fn ($q2) =>
                     $q2->where('area_id', $this->areaId)
@@ -110,37 +110,30 @@ class extends Component {
 <div class="flex-1 flex flex-col h-full overflow-hidden">
 
     {{-- HEADER --}}
-    <header class="px-8 py-6 border-b border-gray-800">
+    <header class="px-8 py-6 border-b border-gray-800 flex-shrink-0">
         <h2 class="text-white text-3xl font-black">Data Parkir</h2>
         <p class="text-slate-400">Monitoring parkir berjalan & selesai</p>
     </header>
 
     {{-- ACTION BAR (TABS & FILTERS) --}}
-    <div class="px-8 pt-6 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-        
-        {{-- LEFT: TABS --}}
+    <div class="px-8 pt-6 flex flex-col lg:flex-row lg:items-center justify-between gap-4 flex-shrink-0">
+        {{-- TABS --}}
         <div class="bg-surface-dark p-1.5 rounded-xl border border-[#3E4C59] inline-flex gap-1 h-fit">
             <button wire:click="setTab('berjalan')"
                 class="px-6 py-2 rounded-lg font-bold text-sm transition
-                {{ $activeTab === 'berjalan'
-                    ? 'bg-primary text-black shadow-lg shadow-primary/20'
-                    : 'text-slate-400 hover:text-white hover:bg-white/5' }}">
+                {{ $activeTab === 'berjalan' ? 'bg-primary text-black shadow-lg shadow-primary/20' : 'text-slate-400 hover:text-white hover:bg-white/5' }}">
                 Berjalan
             </button>
-
             <button wire:click="setTab('selesai')"
                 class="px-6 py-2 rounded-lg font-bold text-sm transition
-                {{ $activeTab === 'selesai'
-                    ? 'bg-primary text-black shadow-lg shadow-primary/20'
-                    : 'text-slate-400 hover:text-white hover:bg-white/5' }}">
+                {{ $activeTab === 'selesai' ? 'bg-primary text-black shadow-lg shadow-primary/20' : 'text-slate-400 hover:text-white hover:bg-white/5' }}">
                 Selesai
             </button>
         </div>
 
-        {{-- RIGHT: FILTERS --}}
+        {{-- FILTERS --}}
         <div class="flex flex-wrap items-center gap-3 bg-surface-dark/50 p-2 rounded-xl border border-[#3E4C59]/50">
-            
-            {{-- LOKASI --}}
+            {{-- AREA --}}
             <div class="flex items-center gap-2 px-2 border-r border-[#3E4C59]">
                 <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Area</span>
                 <select wire:model.live="areaId"
@@ -156,7 +149,7 @@ class extends Component {
             <div class="flex items-center gap-2 px-2 border-r border-[#3E4C59]">
                 <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Tgl</span>
                 <input type="date" wire:model.live="hari"
-                    class="bg-transparent border-none text-white text-xs font-semibold focus:ring-0 cursor-pointer [color-scheme:dark]">
+                    class="bg-transparent border-none text-white text-xs font-semibold focus:ring-0 cursor-pointer">
             </div>
 
             {{-- BULAN --}}
@@ -164,8 +157,8 @@ class extends Component {
                 <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Bulan</span>
                 <select wire:model.live="bulan"
                     class="bg-transparent border-none text-white text-xs font-semibold focus:ring-0 cursor-pointer">
-                    <option value="" class="bg-gray-900 text-white">Semua</option>
-                    @for($i = 1; $i <= 12; $i++)
+                    <option value="">Semua</option>
+                    @for($i=1; $i<=12; $i++)
                         <option value="{{ $i }}" class="bg-gray-900 text-white">
                             {{ Carbon::create()->month($i)->translatedFormat('M') }}
                         </option>
@@ -178,8 +171,8 @@ class extends Component {
                 <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Tahun</span>
                 <select wire:model.live="tahun"
                     class="bg-transparent border-none text-white text-xs font-semibold focus:ring-0 cursor-pointer">
-                    <option value="" class="bg-gray-900 text-white">Semua</option>
-                    @for($y = now()->year; $y >= now()->year - 5; $y--)
+                    <option value="">Semua</option>
+                    @for($y = now()->year; $y >= now()->year-5; $y--)
                         <option value="{{ $y }}" class="bg-gray-900 text-white">{{ $y }}</option>
                     @endfor
                 </select>
@@ -187,24 +180,26 @@ class extends Component {
         </div>
     </div>
 
-
     {{-- CONTENT --}}
-    <div class="flex-1 overflow-y-auto px-8 py-6 scrollbar-hide">
+    <div class="flex-1 flex flex-col px-8 py-6 overflow-hidden">
 
-        {{-- ================= PARKIR BERJALAN ================= --}}
+        {{-- PARKIR BERJALAN --}}
         @if($activeTab === 'berjalan')
-        <div class="bg-surface-dark border border-[#3E4C59] rounded-xl overflow-hidden shadow-sm">
-            <table class="w-full text-left">
-                <thead class="bg-gray-900/60 border-b border-[#3E4C59]">
-                    <tr>
-                        <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Info Kendaraan</th>
-                        <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-center">Slot</th>
-                        <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Waktu Masuk</th>
-                        <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-center">Status</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-[#3E4C59]">
-                    @forelse($this->parkirBerjalan as $item)
+        <div wire:poll.5s class="flex-1 flex flex-col bg-surface-dark border border-[#3E4C59] rounded-xl shadow-sm overflow-hidden">
+
+            {{-- TABLE WRAPPER --}}
+            <div class="flex-1 overflow-y-auto scrollbar-hide">
+                <table class="w-full text-left">
+                    <thead class="bg-gray-900/60 sticky top-0 z-10 border-b border-[#3E4C59]">
+                        <tr>
+                            <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Info Kendaraan</th>
+                            <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-center">Slot</th>
+                            <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Waktu Masuk</th>
+                            <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-center">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-[#3E4C59]">
+                        @forelse($this->parkirBerjalan as $item)
                         <tr class="hover:bg-surface-hover transition-colors">
                             <td class="px-6 py-4">
                                 <div class="text-white font-bold text-base uppercase">{{ $item->plat_nomor ?? 'No Plate' }}</div>
@@ -212,7 +207,7 @@ class extends Component {
                             </td>
                             <td class="px-6 py-4 text-center">
                                 <span class="inline-block px-3 py-1 rounded-md bg-blue-500/10 text-blue-400 border border-blue-500/20 font-mono font-bold">
-                                    {{ $item->slotParkir->kode_slot ?? 'N/A' }}
+                                    {{ $item->slot->kode_slot ?? 'N/A' }}
                                 </span>
                             </td>
                             <td class="px-6 py-4 text-slate-300">
@@ -226,35 +221,38 @@ class extends Component {
                                 </span>
                             </td>
                         </tr>
-                    @empty
+                        @empty
                         <tr>
                             <td colspan="4" class="py-12 text-center text-slate-500 italic">Tidak ada parkir berjalan</td>
                         </tr>
-                    @endforelse
-                </tbody>
-            </table>
-            {{-- PAGINATION LINKS --}}
-            <div class="px-6 py-4 border-t border-[#3E4C59] bg-gray-900/20">
-                {{ $this->parkirBerjalan->links() }}
+                        @endforelse
+                    </tbody>
+                </table>
             </div>
+
+        </div>
+        {{-- PAGINATION --}}
+        <div class="px-6 py-4 border-t border-[#3E4C59] bg-gray-900/20 flex-shrink-0">
+            {{ $this->parkirBerjalan->links() }}
         </div>
         @endif
 
-
-        {{-- ================= PARKIR SELESAI ================= --}}
+        {{-- PARKIR SELESAI --}}
         @if($activeTab === 'selesai')
-        <div class="bg-surface-dark border border-[#3E4C59] rounded-xl overflow-hidden shadow-sm">
-            <table class="w-full text-left">
-                <thead class="bg-gray-900/60 border-b border-[#3E4C59]">
-                    <tr>
-                        <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Kendaraan</th>
-                        <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Waktu (Masuk/Keluar)</th>
-                        <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Durasi & Member</th>
-                        <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-right">Pembayaran</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-[#3E4C59]">
-                    @forelse($this->parkirSelesai as $item)
+        <div class="flex-1 flex flex-col bg-surface-dark border border-[#3E4C59] rounded-xl shadow-sm overflow-hidden">
+
+            <div class="flex-1 overflow-y-auto scrollbar-hide">
+                <table class="w-full text-left">
+                    <thead class="bg-gray-900/60 sticky top-0 z-10 border-b border-[#3E4C59]">
+                        <tr>
+                            <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Kendaraan</th>
+                            <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Waktu (Masuk/Keluar)</th>
+                            <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Durasi & Member</th>
+                            <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-right">Pembayaran</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-[#3E4C59]">
+                        @forelse($this->parkirSelesai as $item)
                         <tr class="hover:bg-surface-hover transition-colors">
                             <td class="px-6 py-4">
                                 <div class="text-white font-bold text-base uppercase leading-tight">{{ $item->kendaraan->plat_nomor ?? '-' }}</div>
@@ -277,15 +275,17 @@ class extends Component {
                                 <div class="text-slate-500 text-[10px] font-medium tracking-tighter">{{ $item->pembayaran->metode_pembayaran ?? 'CASH' }}</div>
                             </td>
                         </tr>
-                    @empty
+                        @empty
                         <tr>
                             <td colspan="4" class="py-12 text-center text-slate-500 italic">Tidak ada histori parkir ditemukan</td>
                         </tr>
-                    @endforelse
-                </tbody>
-            </table>
-            {{-- PAGINATION LINKS --}}
-            <div class="px-6 py-4 border-t border-[#3E4C59] bg-gray-900/20">
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+
+            {{-- PAGINATION --}}
+            <div class="px-6 py-4 border-t border-[#3E4C59] bg-gray-900/20 flex-shrink-0">
                 {{ $this->parkirSelesai->links() }}
             </div>
         </div>

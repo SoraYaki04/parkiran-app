@@ -1,14 +1,21 @@
 <?php
 
 use App\Models\User;
+use App\Models\ActivityLog;
 use Livewire\Volt\Component;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
+use Livewire\Attributes\Computed;
+use Livewire\WithPagination;
 
 new #[Layout('layouts.app')]
 #[Title('User Management')]
 class extends Component {
+    use WithPagination;
 
+    /* ======================
+        STATE
+    =======================*/
     public $userId;
     public $username;
     public $name;
@@ -20,30 +27,57 @@ class extends Component {
     public $filterRole = '';
     public $isEdit = false;
 
-    public function mount()
+    /* ======================
+        PAGINATION RESET
+        (KONSISTEN DENGAN LOG)
+    =======================*/
+    public function updated($property)
     {
-        abort_unless(auth()->user()->role_id === 1, 403);
+        if (in_array($property, ['search', 'filterRole'])) {
+            $this->resetPage();
+        }
+    }
+
+    /* ======================
+        ACTIVITY LOGGER
+    =======================*/
+    private function logActivity(
+        string $action,
+        string $description,
+        string $target = null,
+        string $category = 'MASTER'
+    ) {
+        ActivityLog::create([
+            'user_id'     => auth()->id(),
+            'action'      => $action,
+            'category'    => $category,
+            'target'      => $target,
+            'description' => $description,
+        ]);
     }
 
     /* ======================
         COMPUTED USERS
+        (SINGLE SOURCE + PAGINATION)
     =======================*/
+    #[Computed]
     public function getUsersProperty()
     {
         return User::query()
             ->when($this->search, function ($q) {
                 $q->where(function ($sub) {
                     $sub->where('name', 'like', "%{$this->search}%")
-                       ->orWhere('username', 'like', "%{$this->search}%")
-                       ->orWhere('id', $this->search);
+                        ->orWhere('username', 'like', "%{$this->search}%")
+                        ->orWhere('id', $this->search);
                 });
             })
             ->when($this->filterRole, fn ($q) =>
                 $q->where('role_id', $this->filterRole)
             )
             ->latest()
-            ->get();
+            ->paginate(10);
     }
+
 
     /* ======================
         CREATE
@@ -103,10 +137,28 @@ class extends Component {
             $data['password'] = bcrypt($this->password);
         }
 
-        User::updateOrCreate(
-            ['id' => $this->userId],
-            $data
-        );
+        if ($this->isEdit) {
+            $user = User::findOrFail($this->userId);
+            $user->update($data);
+
+            $this->logActivity(
+                'UPDATE_USER',
+                'Update data user',
+                "User ID: {$user->id} ({$user->username})"
+            );
+
+            $this->dispatch('notify', message: 'User berhasil diperbarui!', type: 'success');
+        } else {
+            $user = User::create($data);
+
+            $this->logActivity(
+                'CREATE_USER',
+                'Menambahkan user baru',
+                "User ID: {$user->id} ({$user->username})"
+            );
+
+            $this->dispatch('notify', message: 'User baru berhasil ditambahkan!', type: 'success');
+        }
 
         $this->resetForm();
         $this->dispatch('close-modal');
@@ -117,7 +169,17 @@ class extends Component {
     =======================*/
     public function delete($id)
     {
-        User::findOrFail($id)->delete();
+        $user = User::findOrFail($id);
+
+        $this->logActivity(
+            'DELETE_USER',
+            'Menghapus user',
+            "User ID: {$user->id} ({$user->username})"
+        );
+
+        $user->delete();
+
+        $this->dispatch('notify', message: 'User berhasil dihapus!', type: 'success');
     }
 
     private function resetForm()
@@ -133,6 +195,7 @@ class extends Component {
     }
 };
 ?>
+
 
 <div class="flex-1 flex flex-col h-full overflow-hidden"
      x-data="{ open: false }"
@@ -180,7 +243,7 @@ class extends Component {
             <table class="w-full">
                 <thead class="bg-gray-900">
                     <tr>
-                        <th class="px-6 py-4 text-left text-slate-400 text-xs">Name</th>
+                        <th class="px-6 py-4 text-left text-slate-400 text-xs">Nama</th>
                         <th class="px-6 py-4 text-left text-slate-400 text-xs">Username</th>
                         <th class="px-6 py-4 text-center text-slate-400 text-xs">Status</th>
                         <th class="px-6 py-4 text-center text-slate-400 text-xs">Role</th>
@@ -222,8 +285,12 @@ class extends Component {
                         </tr>
                     @endforelse
                 </tbody>
+                
             </table>
         </div>
+    </div>
+    <div class="mt-6">
+        {{ $this->users->links() }}
     </div>
 
     {{-- MODAL --}}
@@ -233,27 +300,43 @@ class extends Component {
                 {{ $isEdit ? 'Edit User' : 'Tambah User' }}
             </h3>
 
-            <form wire:submit.prevent="save" class="space-y-3">
-                <input wire:model="name" class="w-full bg-[#161e25] border border-[#3E4C59] rounded-lg px-4 py-2 text-white" placeholder="Nama">
-                <input wire:model="username" class="w-full bg-[#161e25] border border-[#3E4C59] rounded-lg px-4 py-2 text-white" placeholder="Username">
+            <form wire:submit.prevent="save" class="space-y-4">
+                <div>
+                    <label class="text-sm text-gray-400">Nama Anda</label>
+                    <input wire:model="name" class="w-full bg-[#161e25] border border-[#3E4C59] rounded-lg px-4 py-2 text-white" placeholder="Nama">
+                </div>
+
+                <div>
+                    <label class="text-sm text-gray-400">Username (digunakan saat login)</label>
+                    <input wire:model="username" class="w-full bg-[#161e25] border border-[#3E4C59] rounded-lg px-4 py-2 text-white" placeholder="Username">
+                </div>
 
                 @if(!$isEdit)
-                    <input wire:model="password" type="password"
-                           class="w-full bg-[#161e25] border border-[#3E4C59] rounded-lg px-4 py-2 text-white"
-                           placeholder="Password">
+                    <div>
+                        <label class="text-sm text-gray-400">Password</label>
+                        <input wire:model="password" type="password"
+                            class="w-full bg-[#161e25] border border-[#3E4C59] rounded-lg px-4 py-2 text-white"
+                            placeholder="Password">
+                    </div>
                 @endif
 
-                <select wire:model="status" class="w-full bg-[#161e25] border border-[#3E4C59] rounded-lg px-4 py-2 text-white">
-                    <option value="">Pilih Status</option>
-                    <option value="active">Aktif</option>
-                    <option value="inactive">Nonaktif</option>
-                </select>
+                <div>
+                    <label class="text-sm text-gray-400">Status</label>
+                    <select wire:model="status" class="w-full bg-[#161e25] border border-[#3E4C59] rounded-lg px-4 py-2 text-white">
+                        <option value="">Pilih Status</option>
+                        <option value="aktif">Aktif</option>
+                        <option value="nonaktif">Nonaktif</option>
+                    </select>
+                </div>
 
-                <select wire:model="role_id" class="w-full bg-[#161e25] border border-[#3E4C59] rounded-lg px-4 py-2 text-white">
-                    <option value="">Select Role</option>
-                    <option value="1">Admin</option>
-                    <option value="2">Petugas</option>
-                </select>
+                <div>
+                    <label class="text-sm text-gray-400">Role</label>
+                    <select wire:model="role_id" class="w-full bg-[#161e25] border border-[#3E4C59] rounded-lg px-4 py-2 text-white">
+                        <option value="">Select Role</option>
+                        <option value="1">Admin</option>
+                        <option value="2">Petugas</option>
+                    </select>
+                </div>
 
                 <div class="flex justify-end gap-2 pt-4">
                     <button type="button" x-on:click="open=false" class="text-gray-400">Cancel</button>

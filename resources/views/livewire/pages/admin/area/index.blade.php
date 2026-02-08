@@ -4,15 +4,17 @@ use App\Models\AreaParkir;
 use App\Models\SlotParkir;
 use App\Models\TipeKendaraan;
 use App\Models\AreaKapasitas;
+use App\Models\ActivityLog;
 use Illuminate\Support\Facades\DB;
 use Livewire\Volt\Component;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
-
+use Livewire\WithPagination;
 
 new #[Layout('layouts.app')]
 #[Title('Parking Area Management')]
 class extends Component {
+    use WithPagination;
 
     public $areaId;
     public $kode_area;
@@ -21,14 +23,41 @@ class extends Component {
     public $kapasitas_total;
     public $selectedTipe = [];
     public $kapasitas = [];
+    public $status = 'aktif';
+    public $lastSavedArea;
+    public $hasTerisi = false;
+    public $oldKapasitasTotal = 0;
 
 
     public $search = '';
     public $isEdit = false;
 
     /* ===============================
-        DATA AREA PARKIR
+        ACTIVITY LOGGER
     =============================== */
+    private function logActivity(
+        string $action,
+        string $description,
+        string $target = null,
+        string $category = 'MASTER'
+    ) {
+        ActivityLog::create([
+            'user_id'     => auth()->id(),
+            'action'      => $action,
+            'category'    => $category,
+            'target'      => $target,
+            'description' => $description,
+        ]);
+    }
+
+    /* ===============================
+        DATA
+    =============================== */
+
+    public function updatedSearch()
+    {
+        $this->resetPage();
+    }
 
     public function getTipeKendaraanProperty()
     {
@@ -39,31 +68,36 @@ class extends Component {
     {
         return AreaParkir::query()
             ->when($this->search, function ($q) {
-                $q->where(function ($sub) {
-                    $sub->where('kode_area', 'like', "%{$this->search}%")
-                        ->orWhere('nama_area', 'like', "%{$this->search}%")
-                        ->orWhere('lokasi_fisik', 'like', "%{$this->search}%");
-                });
+                $q->where('kode_area', 'like', "%{$this->search}%")
+                  ->orWhere('nama_area', 'like', "%{$this->search}%")
+                  ->orWhere('lokasi_fisik', 'like', "%{$this->search}%");
             })
-            ->orderBy('created_at', 'desc')
-            ->get();
+            ->latest()
+            ->paginate(10); // <-- gunakan paginate
     }
-
 
     /* ===============================
         STATUS AREA
     =============================== */
     public function getStatus($areaId)
     {
-        $total = SlotParkir::where('area_id', $areaId)->count();
+        $area = AreaParkir::find($areaId);
+
+        if ($area->status === 'maintenance') {
+            return 'Maintenance';
+        }
+
+        $total  = SlotParkir::where('area_id', $areaId)->count();
         $terisi = SlotParkir::where('area_id', $areaId)
-                    ->where('status', 'terisi')
-                    ->count();
+            ->where('status', 'terisi')
+            ->count();
 
         if ($total === 0) return 'Maintenance';
         if ($terisi >= $total) return 'Full';
+
         return 'Available';
     }
+
 
     /* ===============================
         CREATE
@@ -80,28 +114,37 @@ class extends Component {
     =============================== */
     public function edit($id)
     {
-        // 🔹 INI BARISNYA DITARUH DI SINI
         $area = AreaParkir::with('kapasitas')->findOrFail($id);
 
-        $this->areaId = $area->id;
-        $this->kode_area = $area->kode_area;
-        $this->nama_area = $area->nama_area;
-        $this->lokasi_fisik = $area->lokasi_fisik;
-        $this->kapasitas_total = $area->kapasitas_total;
+        $terisi = SlotParkir::where('area_id', $id)
+            ->where('status', 'terisi')
+            ->exists();
 
-        // reset dulu
+        $this->hasTerisi = $terisi;
+
+        $this->areaId              = $area->id;
+        $this->kode_area           = $area->kode_area;
+        $this->nama_area           = $area->nama_area;
+        $this->lokasi_fisik        = $area->lokasi_fisik;
+        $this->kapasitas_total     = $area->kapasitas_total;
+        $this->oldKapasitasTotal   = $area->kapasitas_total;
+        $this->status              = $area->status;
+
         $this->selectedTipe = [];
         $this->kapasitas = [];
 
-        // 🔹 pakai relasi yang BENAR
-        foreach ($area->kapasitas ?? [] as $item) {
-            $this->selectedTipe[] = $item->tipe_kendaraan_id;
-            $this->kapasitas[$item->tipe_kendaraan_id] = $item->kapasitas;
+        // JIKA BELUM ADA SLOT TERISI → BOLEH EDIT TIPE & KAPASITAS
+        if (! $terisi) {
+            foreach ($area->kapasitas as $item) {
+                $this->selectedTipe[] = $item->tipe_kendaraan_id;
+                $this->kapasitas[$item->tipe_kendaraan_id] = $item->kapasitas;
+            }
         }
 
         $this->isEdit = true;
         $this->dispatch('open-modal');
     }
+
 
 
 
@@ -114,77 +157,139 @@ class extends Component {
             'kode_area'    => 'required|unique:area_parkir,kode_area,' . $this->areaId,
             'nama_area'    => 'required',
             'lokasi_fisik' => 'required',
-            'selectedTipe' => 'required|array|min:1',
+            'status'       => 'required|in:aktif,maintenance',
         ]);
 
+        // CEK APAKAH SUDAH ADA SLOT TERISI
+        $terisi = false;
 
         if ($this->isEdit) {
             $terisi = SlotParkir::where('area_id', $this->areaId)
                 ->where('status', 'terisi')
                 ->exists();
+        }
 
-            if ($terisi) {
-                session()->flash('error', 'Area masih memiliki kendaraan terparkir');
+        /* =====================================================
+            BERSIHKAN DATA KAPASITAS YANG TIDAK DICENTANG
+        ===================================================== */
+        $this->kapasitas = array_intersect_key(
+            $this->kapasitas,
+            array_flip($this->selectedTipe)
+        );
+
+        /* =====================================================
+            VALIDASI KAPASITAS (HANYA JIKA BELUM ADA SLOT TERISI)
+        ===================================================== */
+        if (! $terisi) {
+
+            if (empty($this->selectedTipe)) {
+                $this->dispatch('notify',
+                    message: 'Pilih minimal satu tipe kendaraan',
+                    type: 'error'
+                );
                 return;
+            }
+
+            foreach ($this->selectedTipe as $tipeId) {
+                if (
+                    ! isset($this->kapasitas[$tipeId]) ||
+                    $this->kapasitas[$tipeId] <= 0
+                ) {
+                    $this->addError("kapasitas.$tipeId", 'Jumlah slot wajib diisi');
+                    return;
+                }
             }
         }
 
-
+        /* =====================================================
+            HITUNG KAPASITAS TOTAL DARI TIPE YANG EDI CENTANG
+        ===================================================== */
+        $totalKapasitas = 0;
 
         foreach ($this->selectedTipe as $tipeId) {
-            if (empty($this->kapasitas[$tipeId]) || $this->kapasitas[$tipeId] <= 0) {
-                $this->addError('kapasitas.' . $tipeId, 'Jumlah slot wajib diisi');
-                return;
-            }
+            $totalKapasitas += (int) $this->kapasitas[$tipeId];
         }
 
+        DB::transaction(function () use ($terisi, $totalKapasitas) {
 
-        DB::transaction(function () {
-
-            // 1️⃣ Hitung kapasitas total
-            $this->kapasitas_total = array_sum($this->kapasitas);
-
-            // 2️⃣ Simpan area
+            /* ===============================
+                SIMPAN / UPDATE AREA PARKIR
+            =============================== */
             $area = AreaParkir::updateOrCreate(
                 ['id' => $this->areaId],
                 [
                     'kode_area'       => $this->kode_area,
                     'nama_area'       => $this->nama_area,
                     'lokasi_fisik'    => $this->lokasi_fisik,
-                    'kapasitas_total' => $this->kapasitas_total,
+                    'status'          => $this->status,
+                    'kapasitas_total' => $terisi
+                        ? $this->kapasitas_total
+                        : $totalKapasitas,
                 ]
             );
 
-            // jika edit → reset slot lama
+            /* =====================================================
+                JIKA SUDAH ADA SLOT TERISI → STOP DI SINI
+            ===================================================== */
+            if ($terisi) {
+
+                $this->logActivity(
+                    'UPDATE_AREA',
+                    'Update area parkir (tanpa ubah slot & kapasitas)',
+                    "Area ID {$area->id} ({$area->nama_area})"
+                );
+
+                return;
+            }
+
+            /* ===============================
+                RESET SLOT & KAPASITAS
+            =============================== */
             SlotParkir::where('area_id', $area->id)->delete();
             AreaKapasitas::where('area_id', $area->id)->delete();
 
-            // 3️⃣ Simpan kapasitas + generate slot
+            /* ===============================
+                GENERATE SLOT BARU
+            =============================== */
             foreach ($this->selectedTipe as $tipeId) {
 
-                $jumlah = $this->kapasitas[$tipeId] ?? 0;
-                if ($jumlah <= 0) continue;
+                $jumlah = $this->kapasitas[$tipeId];
+                $tipe   = TipeKendaraan::findOrFail($tipeId);
 
                 AreaKapasitas::create([
-                    'area_id' => $area->id,
+                    'area_id'           => $area->id,
                     'tipe_kendaraan_id' => $tipeId,
-                    'kapasitas' => $jumlah
+                    'kapasitas'         => $jumlah,
                 ]);
-
-                $tipe = TipeKendaraan::find($tipeId);
 
                 for ($i = 1; $i <= $jumlah; $i++) {
                     SlotParkir::create([
-                        'area_id' => $area->id,
-                        'kode_slot' => $tipe->kode_tipe . $i,
-                        'baris' => $tipe->kode_tipe,
-                        'kolom' => $i,
+                        'area_id'           => $area->id,
+                        'kode_slot'         => $tipe->kode_tipe . $i,
+                        'baris'             => $tipe->kode_tipe,
+                        'kolom'             => $i,
                         'tipe_kendaraan_id' => $tipeId,
-                        'status' => 'kosong'
+                        'status'            => 'kosong',
                     ]);
                 }
             }
+
+            /* ===============================
+                ACTIVITY LOG
+            =============================== */
+            $this->logActivity(
+                $this->isEdit ? 'UPDATE_AREA' : 'CREATE_AREA',
+                $this->isEdit
+                    ? 'Update area parkir beserta slot'
+                    : 'Tambah area parkir baru',
+                "Area ID {$area->id} ({$area->nama_area})"
+            );
         });
+
+        $this->dispatch('notify',
+            message: 'Area parkir berhasil disimpan',
+            type: 'success'
+        );
 
         $this->resetForm();
         $this->dispatch('close-modal');
@@ -196,9 +301,40 @@ class extends Component {
     =============================== */
     public function delete($id)
     {
-        AreaParkir::findOrFail($id)->delete();
+        $terisi = SlotParkir::where('area_id', $id)
+            ->where('status', 'terisi')
+            ->exists();
+
+        if ($terisi) {
+            $this->dispatch('notify',
+                message: 'Area tidak bisa dihapus karena masih ada slot terisi',
+                type: 'error'
+            );
+            return;
+        }
+
+        DB::transaction(function () use ($id) {
+            SlotParkir::where('area_id', $id)->delete();
+            AreaKapasitas::where('area_id', $id)->delete();
+            AreaParkir::findOrFail($id)->delete();
+
+            $this->logActivity(
+                'DELETE_AREA',
+                'Hapus area parkir',
+                "Area ID {$id}"
+            );
+        });
+
+        $this->dispatch('notify',
+            message: 'Area parkir berhasil dihapus',
+            type: 'success'
+        );
     }
 
+
+    /* ===============================
+        RESET FORM
+    =============================== */
     private function resetForm()
     {
         $this->reset([
@@ -207,14 +343,17 @@ class extends Component {
             'nama_area',
             'lokasi_fisik',
             'kapasitas_total',
+            'oldKapasitasTotal',
             'selectedTipe',
             'kapasitas',
+            'isEdit',
+            'hasTerisi',
         ]);
     }
 
-    
 };
 ?>
+
 
 <div class="flex-1 flex flex-col h-full overflow-hidden"
      x-data="{ open:false }"
@@ -222,12 +361,10 @@ class extends Component {
      x-on:close-modal.window="open=false">
 
     {{-- HEADER --}}
-    <header class="px-8 py-6 border-b border-gray-800 flex justify-between items-end">
+    <header class="px-8 py-6 border-b border-gray-800 flex justify-between items-end flex-shrink-0">
         <div>
             <h2 class="text-white text-3xl font-black">Manajemen Area Parkir</h2>
-            <p class="text-slate-400">
-                Atur area parkir
-            </p>
+            <p class="text-slate-400">Atur area parkir</p>
         </div>
 
         <button wire:click="create"
@@ -237,9 +374,8 @@ class extends Component {
         </button>
     </header>
 
-
     <!-- SEARCH -->
-    <div class="px-8 pt-6">
+    <div class="px-8 pt-6 flex-shrink-0">
         <div class="bg-surface-dark p-5 rounded-xl border border-[#3E4C59]">
             <input
                 wire:model.live="search"
@@ -248,12 +384,11 @@ class extends Component {
         </div>
     </div>
 
-
     {{-- TABLE --}}
     <div class="flex-1 overflow-y-auto px-8 py-6 scrollbar-hide">
-        <div class="bg-surface-dark border border-[#3E4C59] rounded-xl overflow-hidden">
+        <div class="bg-surface-dark border border-[#3E4C59] rounded-xl overflow-hidden min-h-[300px]">
             <table class="w-full">
-                <thead class="bg-gray-900">
+                <thead class="bg-gray-900 sticky top-0 z-10">
                     <tr>
                         <th class="px-6 py-4 text-left text-slate-400 text-xs">Kode Area</th>
                         <th class="px-6 py-4 text-left text-slate-400 text-xs">Nama Area</th>
@@ -265,70 +400,73 @@ class extends Component {
                 </thead>
 
                 <tbody class="divide-y divide-[#3E4C59]">
-
                     @forelse ($this->areas as $area)
-                    <tr class="hover:bg-surface-hover">
-                        <td class="px-6 py-4 text-white font-bold">
-                            {{ $area->kode_area }}
-                        </td>
+                        @php
+                            $isUsed = \App\Models\SlotParkir::where('area_id', $area->id)
+                                        ->where('status', 'terisi')
+                                        ->exists();
+                            $status = $area->status;
+                        @endphp
 
-                        <td class="px-6 py-4 text-white">
-                            {{ $area->nama_area }}
-                        </td>
+                        <tr class="hover:bg-surface-hover">
+                            <td class="px-6 py-4 text-white font-bold">{{ $area->kode_area }}</td>
+                            <td class="px-6 py-4 text-white">{{ $area->nama_area }}</td>
+                            <td class="px-6 py-4 text-slate-300">{{ $area->lokasi_fisik }}</td>
+                            <td class="px-6 py-4 text-center text-white font-bold">{{ $area->kapasitas_total ?? 0 }}</td>
+                            <td class="px-6 py-4 text-center">
+                                @if ($status === 'aktif')
+                                    <span class="text-xs font-bold text-green-400">Aktif</span>
+                                @elseif ($status === 'maintenance')
+                                    <span class="text-xs font-bold text-yellow-400">Maintenance</span>
+                                @else
+                                    <span class="text-xs font-bold text-gray-400">Tidak Diketahui</span>
+                                @endif
+                            </td>
+                            <td class="px-6 py-4 text-center">
+                                <button wire:click="edit({{ $area->id }})" class="text-primary p-2">
+                                    <span class="material-symbols-outlined">edit</span>
+                                </button>
 
-                        <td class="px-6 py-4 text-slate-300">
-                            {{ $area->lokasi_fisik }}
-                        </td>
+                                <button
+                                    wire:click="delete({{ $area->id }})"
+                                    onclick="return confirm('Hapus area ini?')"
+                                    @if($isUsed) disabled @endif
+                                    class="p-2 {{ $isUsed ? 'text-gray-500 cursor-not-allowed' : 'text-red-400 hover:text-red-500' }}"
+                                    title="{{ $isUsed ? 'Area masih digunakan, tidak bisa dihapus' : 'Hapus' }}">
+                                    <span class="material-symbols-outlined">delete</span>
+                                </button>
+                            </td>
+                        </tr>
 
-                        <td class="px-6 py-4 text-center text-white font-bold">
-                            {{ $area->kapasitas_total ?? 0 }}
-                        </td>
-
-                        <td class="px-6 py-4 text-center">
-                            @php $status = $area->status; @endphp
-
-                            @if ($status === 'Full')
-                                <span class="text-xs font-bold text-red-400">Full</span>
-                            @elseif ($status === 'Available')
-                                <span class="text-xs font-bold text-green-400">Available</span>
-                            @else
-                                <span class="text-xs font-bold text-yellow-400">Maintenance</span>
-                            @endif
-                        </td>
-
-                        <td class="px-6 py-4 text-center">
-                            <button wire:click="edit({{ $area->id }})" class="text-primary p-2">
-                                <span class="material-symbols-outlined">edit</span>
-                            </button>
-                            <button wire:click="delete({{ $area->id }})"
-                                onclick="return confirm('Hapus area ini?')"
-                                class="text-red-400 p-2">
-                                <span class="material-symbols-outlined">delete</span>
-                            </button>
-                        </td>
-                    </tr>
                     @empty
-                    <tr>
-                        <td colspan="6" class="py-10 text-center text-slate-500">
-                            Tidak ada area parkir
-                        </td>
-                    </tr>
+                        <tr>
+                            <td colspan="6" class="py-10 text-center text-slate-500">
+                                Tidak ada area parkir
+                            </td>
+                        </tr>
                     @endforelse
+                </tbody>
+            </table>
+        </div>
+    </div>
 
-            </tbody>
-        </table>
+    {{-- PAGINATION --}}
+    <div class="px-8 py-2 flex-shrink-0">
+        {{ $this->areas->links() }}
     </div>
 
     <!-- MODAL -->
     <div x-show="open" x-transition class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-        <div @click.away="open=false" class="bg-card-dark w-full max-w-lg p-6 rounded-xl">
+        <div @click.away="open=false"
+            class="bg-card-dark w-full max-w-lg rounded-xl max-h-[90vh] flex flex-col">
 
-            <h3 class="text-white font-bold mb-4">
-                {{ $isEdit ? 'Edit Area Parkir' : 'Tambah Area Parkir' }}
-            </h3>
+            <div class="p-6 border-b border-gray-700">
+                <h3 class="text-white font-bold">
+                    {{ $isEdit ? 'Edit Area Parkir' : 'Tambah Area Parkir' }}
+                </h3>
+            </div>
 
-            <form wire:submit.prevent="save" class="space-y-4">
-
+            <form wire:submit.prevent="save" class="flex-1 overflow-y-auto px-6 py-4 space-y-4 scrollbar-hide">
 
                 <!-- KODE AREA -->
                 <div>
@@ -357,6 +495,33 @@ class extends Component {
                         class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500">
                 </div>
 
+                <div>
+                    <label class="text-sm text-gray-400">Status Area</label>
+                    <select
+                        wire:model="status"
+                        @if($hasTerisi) disabled @endif
+                        class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white
+                            {{ $hasTerisi ? 'opacity-60 cursor-not-allowed' : '' }}">
+                        <option value="aktif">Aktif</option>
+                        <option value="maintenance">Maintenance</option>
+                    </select>
+
+                    @if($hasTerisi)
+                        <p class="text-xs text-yellow-400 mt-1">
+                            Status tidak dapat diubah karena sudah ada kendaraan parkir
+                        </p>
+                    @endif
+                </div>
+
+
+                @if($hasTerisi)
+                    <div class="bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 text-sm p-3 rounded-lg">
+                        Area ini sudah memiliki kendaraan parkir.
+                        <br>
+                        Pengaturan tipe kendaraan, jumlah slot, dan status tidak dapat diubah.
+                    </div>
+                @endif
+
                 <hr class="border-gray-700">
                 <h3 class="text-sm font-semibold text-gray-300">Tipe Kendaraan</h3>
 
@@ -364,11 +529,14 @@ class extends Component {
                 <div class="space-y-1">
 
                     <label class="flex items-center gap-2 text-gray-300">
-                        <input
-                            type="checkbox"
-                            wire:model="selectedTipe"
-                            value="{{ $tipe->id }}"
-                            class="rounded border-gray-600 bg-gray-800">
+                    <input
+                        type="checkbox"
+                        wire:model="selectedTipe"
+                        value="{{ $tipe->id }}"
+                        @if($hasTerisi) disabled @endif
+                        class="rounded border-gray-600 bg-gray-800
+                            {{ $hasTerisi ? 'opacity-60 cursor-not-allowed' : '' }}">
+
                         {{ $tipe->nama_tipe }}
                     </label>
 
@@ -377,24 +545,32 @@ class extends Component {
                             type="number"
                             min="1"
                             wire:model.defer="kapasitas.{{ $tipe->id }}"
+                            @if($hasTerisi) disabled @endif
                             placeholder="Jumlah slot untuk {{ $tipe->nama_tipe }}"
-                            class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500">
+                            class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white
+                                {{ $hasTerisi ? 'opacity-60 cursor-not-allowed' : '' }}">
                     @endif
+
 
                 </div>
                 @endforeach
 
-                <div class="flex justify-end gap-3 pt-4">
+                <div class="px-6 py-4 border-t border-gray-700 flex justify-end gap-3">
                     <button type="button" @click="open=false" class="text-gray-400 hover:text-white">
                         Batal
                     </button>
-                    <button class="bg-primary px-4 py-2 rounded-lg font-bold text-black">
+                    <button
+                        wire:loading.attr="disabled"
+                        class="bg-primary px-4 py-2 rounded-lg font-bold text-black disabled:opacity-60">
                         Simpan
                     </button>
+
                 </div>
+
 
             </form>
         </div>
     </div>
 
 </div>
+

@@ -35,4 +35,5 @@ class ParkirSessions extends Model
     {
         return $this->belongsTo(TipeKendaraan::class, 'tipe_kendaraan_id');
     }
+
 }
