@@ -1,8 +1,11 @@
 <?php
 
+namespace App\Livewire;
+
 use App\Models\Member;
 use App\Models\TierMember;
 use App\Models\Kendaraan;
+use App\Models\TipeKendaraan;
 use App\Models\ActivityLog;
 use Livewire\Volt\Component;
 use Livewire\Attributes\Layout;
@@ -11,20 +14,19 @@ use Carbon\Carbon;
 
 new #[Layout('layouts.app')]
 #[Title('Member Management')]
-class extends Component {
-
+class extends Component
+{
     public $memberId;
     public $kode_member;
     public $nama;
     public $no_hp;
-    public $kendaraan_id;
     public $tier_member_id;
+    public $tipe_kendaraan_id; // Pilihan tipe kendaraan
     public $tanggal_mulai;
     public $tanggal_berakhir;
     public $status = 'aktif';
     public $plat_search = '';
     public $isEdit = false;
-    public $showDropdown = false;
 
     public string $search = '';
     public string $filterTier = '';
@@ -35,27 +37,17 @@ class extends Component {
         $this->autoExpireMember();
     }
 
-    /* ===============================
-        ACTIVITY LOGGER
-    =============================== */
-    private function logActivity(
-        string $action,
-        string $description,
-        string $target = null,
-        string $category = 'MASTER'
-    ) {
+    private function logActivity(string $action, string $description, string $target = null, string $category = 'MASTER')
+    {
         ActivityLog::create([
-            'user_id'     => auth()->id(),
-            'action'      => $action,
-            'category'    => $category,
-            'target'      => $target,
+            'user_id' => auth()->id(),
+            'action' => $action,
+            'category' => $category,
+            'target' => $target,
             'description' => $description,
         ]);
     }
 
-    /* ===============================
-        AUTO EXPIRED
-    =============================== */
     private function autoExpireMember()
     {
         Member::where('status', 'aktif')
@@ -64,16 +56,9 @@ class extends Component {
             ->update(['status' => 'expired']);
     }
 
-    /* ===============================
-        COMPUTED DATA
-    =============================== */
     public function updated($property)
     {
-        if (in_array($property, [
-            'search',
-            'filterTier',
-            'filterStatus',
-        ])) {
+        if (in_array($property, ['search', 'filterTier', 'filterStatus'])) {
             $this->resetPage();
         }
     }
@@ -81,54 +66,25 @@ class extends Component {
     public function getMembersProperty()
     {
         return Member::with(['kendaraan', 'tier'])
-            ->when($this->search, function ($q) {
-                $q->where(function ($sub) {
-                    $sub->where('kode_member', 'like', "%{$this->search}%")
-                        ->orWhere('nama', 'like', "%{$this->search}%")
-                        ->orWhereHas('kendaraan', function ($k) {
-                            $k->where('plat_nomor', 'like', "%{$this->search}%");
-                        });
-                });
-            })
-            ->when($this->filterTier, function ($q) {
-                $q->where('tier_member_id', $this->filterTier);
-            })
-            ->when($this->filterStatus, function ($q) {
-                $q->where('status', $this->filterStatus);
-            })
-            ->orderBy('created_at', 'desc')
+            ->when($this->search, fn($q) =>
+                $q->where('kode_member','like',"%{$this->search}%")
+                  ->orWhere('nama','like',"%{$this->search}%")
+                  ->orWhereHas('kendaraan', fn($k) => $k->where('plat_nomor','like',"%{$this->search}%"))
+            )
+            ->when($this->filterTier, fn($q)=> $q->where('tier_member_id', $this->filterTier))
+            ->when($this->filterStatus, fn($q)=> $q->where('status', $this->filterStatus))
+            ->orderByDesc('created_at')
             ->paginate(10);
     }
 
-    public function getTiersProperty()
-    {
+    public function getTiersProperty() 
+    { 
         return TierMember::where('status','aktif')->get();
     }
 
-    public function getKendaraanListProperty()
+    public function getTipeKendaraansProperty()
     {
-        if (!$this->plat_search || !$this->showDropdown) {
-            return collect();
-        }
-
-        return Kendaraan::where('plat_nomor','like',"%{$this->plat_search}%")
-            ->limit(7)
-            ->get();
-    }
-
-    /* ===============================
-        SEARCH HANDLER
-    =============================== */
-    public function updatedPlatSearch()
-    {
-        $this->showDropdown = strlen($this->plat_search) >= 2;
-    }
-
-    public function selectKendaraan($id, $plat)
-    {
-        $this->kendaraan_id = $id;
-        $this->plat_search = $plat;
-        $this->showDropdown = false;
+        return TipeKendaraan::all();
     }
 
     /* ===============================
@@ -161,7 +117,7 @@ class extends Component {
     public function create()
     {
         $this->reset([
-            'memberId','kendaraan_id','tier_member_id',
+            'memberId','tier_member_id','tipe_kendaraan_id',
             'plat_search','tanggal_berakhir','nama','no_hp'
         ]);
 
@@ -169,7 +125,6 @@ class extends Component {
         $this->kode_member   = $this->generateKodeMember();
         $this->status        = 'aktif';
         $this->isEdit        = false;
-        $this->showDropdown  = false;
 
         $this->dispatch('open-modal');
     }
@@ -185,16 +140,14 @@ class extends Component {
         $this->kode_member      = $m->kode_member;
         $this->nama             = $m->nama;
         $this->no_hp            = $m->no_hp;
-        $this->kendaraan_id     = $m->kendaraan_id;
         $this->plat_search      = $m->kendaraan->plat_nomor;
+        $this->tipe_kendaraan_id= $m->kendaraan->tipe_kendaraan_id ?? null;
         $this->tier_member_id   = $m->tier_member_id;
         $this->tanggal_mulai    = $m->tanggal_mulai;
         $this->tanggal_berakhir = $m->tanggal_berakhir;
         $this->status           = $m->status;
 
-        $this->isEdit        = true;
-        $this->showDropdown   = false;
-
+        $this->isEdit = true;
         $this->dispatch('open-modal');
     }
 
@@ -219,24 +172,58 @@ class extends Component {
             type: 'success'
         );
     }
+    
+    private function normalizePlat(string $input): string
+    {
+        $input = strtoupper(trim($input));
+        $input = preg_replace('/[^A-Z0-9]/', '', $input);
+    
+        if (!preg_match('/^([A-Z]{1,2})(\d{1,5})([A-Z]{0,3})$/', $input, $m)) {
+            throw new \Exception('Format plat tidak valid');
+        }
+    
+        return trim($m[1] . ' ' . $m[2] . ' ' . ($m[3] ?? ''));
+    }
 
     /* ===============================
         SAVE
     =============================== */
+
     public function save()
     {
-        $rules = [
-            'nama'            => 'required|string|max:255',
-            'no_hp'           => 'required|string|max:20',
-            'kendaraan_id'    => 'required|exists:kendaraan,id',
-            'tier_member_id'  => 'required|exists:tier_member,id',
-        ];
+        $this->validate([
+            'nama'           => 'required|string|max:255',
+            'no_hp'          => 'required|string|max:20',
+            'plat_search'    => 'required|string|max:20',
+            'tipe_kendaraan_id' => 'required|exists:tipe_kendaraan,id',
+            'tier_member_id' => 'required|exists:tier_member,id',
+        ]);
 
-        if (!$this->isEdit) {
-            $rules['kendaraan_id'] .= '|unique:member,kendaraan_id';
+        try {
+            $platDB = $this->normalizePlat($this->plat_search);
+        } catch (\Exception $e) {
+            $this->dispatch('notify', message: $e->getMessage(), type: 'error');
+            return;
         }
 
-        $this->validate($rules);
+        $kendaraan = Kendaraan::where('plat_nomor', $platDB)->first();
+
+        if (!$kendaraan) {
+            $kendaraan = Kendaraan::create([
+                'plat_nomor' => $platDB,
+                'tipe_kendaraan_id' => $this->tipe_kendaraan_id,
+            ]);
+
+            $this->logActivity(
+                'CREATE_KENDARAAN',
+                'Menambahkan kendaraan baru dari form member',
+                "ID {$kendaraan->id} ({$kendaraan->plat_nomor})"
+            );
+        } else {
+            if ($kendaraan->tipe_kendaraan_id != $this->tipe_kendaraan_id) {
+                $kendaraan->update(['tipe_kendaraan_id' => $this->tipe_kendaraan_id]);
+            }
+        }
 
         $member = Member::updateOrCreate(
             ['id' => $this->memberId],
@@ -244,7 +231,7 @@ class extends Component {
                 'kode_member'      => $this->kode_member,
                 'nama'             => $this->nama,
                 'no_hp'            => $this->no_hp,
-                'kendaraan_id'     => $this->kendaraan_id,
+                'kendaraan_id'     => $kendaraan->id,
                 'tier_member_id'   => $this->tier_member_id,
                 'tanggal_mulai'    => $this->tanggal_mulai,
                 'tanggal_berakhir' => $this->tanggal_berakhir,
@@ -252,28 +239,18 @@ class extends Component {
             ]
         );
 
-        // LOG & NOTIFIKASI
-        if ($this->isEdit) {
-            $this->logActivity(
-                'UPDATE_MEMBER',
-                'Update data member',
-                "ID {$member->id} ({$member->kode_member})"
-            );
-            $this->dispatch('notify', message: 'Member berhasil diperbarui!', type: 'success');
-        } else {
-            $this->logActivity(
-                'CREATE_MEMBER',
-                'Menambahkan member baru',
-                "ID {$member->id} ({$member->kode_member})"
-            );
-            $this->dispatch('notify', message: 'Member baru berhasil ditambahkan!', type: 'success');
-        }
+        $this->logActivity(
+            $this->isEdit ? 'UPDATE_MEMBER' : 'CREATE_MEMBER',
+            $this->isEdit ? 'Update data member' : 'Menambahkan member baru',
+            "ID {$member->id} ({$member->kode_member})"
+        );
 
-        $this->reset([
-            'memberId','kendaraan_id','tier_member_id','plat_search','tanggal_berakhir','nama','no_hp'
-        ]);
+        $this->dispatch('notify', message: $this->isEdit ? 'Member berhasil diperbarui!' : 'Member baru berhasil ditambahkan!', type: 'success');
+
+        $this->reset(['memberId', 'plat_search', 'nama', 'no_hp', 'tier_member_id', 'tanggal_berakhir']);
         $this->dispatch('close-modal');
     }
+
 
     /* ===============================
         GENERATE KODE MEMBER
@@ -294,6 +271,7 @@ class extends Component {
     }
 };
 ?>
+
 
 
 
@@ -457,31 +435,28 @@ class extends Component {
                         placeholder="Masukkan nomor HP">
                 </div>
 
-                {{-- SEARCH PLAT --}}
-                <div class="relative">
-                    <label class="text-sm text-gray-400">Search Plat</label>
-                    <input wire:model.live="plat_search"
-                        placeholder="Cari plat kendaraan..."
-                        oninput="formatPlatLivewire(this)"
-                        class="w-full bg-[#161e25] border border-[#3E4C59]
-                                rounded-lg px-4 py-2 text-white">
-
-                    @if($plat_search && $this->kendaraanList->count())
-                        <div class="absolute z-50 w-full mt-1 bg-[#020617]
-                                    border border-gray-700 rounded-lg
-                                    max-h-40 overflow-y-auto">
-
-                            @foreach($this->kendaraanList as $k)
-                                <div
-                                    wire:click="selectKendaraan({{ $k->id }}, '{{ $k->plat_nomor }}')"
-                                    class="px-4 py-2 hover:bg-gray-700 cursor-pointer text-white">
-                                    {{ $k->plat_nomor }}
-                                </div>
-                            @endforeach
-                        </div>
-                    @endif
+                {{-- PILIH TIPE KENDARAAN --}}
+                <div>
+                    <label class="text-sm text-gray-400">Tipe Kendaraan</label>
+                    <select wire:model="tipe_kendaraan_id"
+                            class="w-full bg-[#161e25] border border-[#3E4C59] rounded-lg px-4 py-2 text-white">
+                        <option value="">Pilih Tipe Kendaraan</option>
+                        @foreach($this->tipeKendaraans as $t)
+                            <option value="{{ $t->id }}">{{ $t->nama_tipe }}</option>
+                        @endforeach
+                    </select>
                 </div>
 
+                <div>
+                    <label class="text-sm text-gray-400">Plat Nomor</label>
+                    <input 
+                        wire:model.live="plat_search" 
+                        id="plat-input"
+                        class="w-full rounded-xl bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 h-16 pl-5 pr-4 text-lg font-bold uppercase focus:border-primary-500 focus:ring-0 transition-all text-slate-900 dark:text-white" 
+                        placeholder="INPUT PLAT"
+                        oninput="formatPlatDash(this)"
+                    />
+                </div>
 
                 {{-- TIER --}}
                 <div>
@@ -539,3 +514,35 @@ class extends Component {
 
 </div>
 
+@push('scripts')
+<script>
+    function formatPlatDash(el) {
+        let value = el.value.toUpperCase();
+
+        // buang semua kecuali huruf & angka
+        value = value.replace(/[^A-Z0-9]/g, '');
+
+        let depan = '';
+        let nomor = '';
+        let belakang = '';
+
+        // 1–2 huruf depan
+        depan = value.match(/^[A-Z]{1,2}/)?.[0] ?? '';
+        value = value.slice(depan.length);
+
+        // 1–5 angka tengah
+        nomor = value.match(/^\d{1,5}/)?.[0] ?? '';
+        value = value.slice(nomor.length);
+
+        // 0–3 huruf belakang
+        belakang = value.slice(0, 3);
+
+        let hasil = depan;
+        if (nomor) hasil += '-' + nomor;
+        if (belakang) hasil += '-' + belakang;
+
+        el.value = hasil;
+    }
+</script>
+
+@endpush

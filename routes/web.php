@@ -1,5 +1,6 @@
 <?php
 use App\Livewire\Parkir\Kiosk\LayarMasuk;
+use App\Livewire\Parkir\DisplayParkir;
 use App\Livewire\Parkir\Mobile\PilihSlot;
 use App\Livewire\Parkir\Mobile\Karcis;
 use Illuminate\Support\Facades\Route;
@@ -18,6 +19,8 @@ use Livewire\Volt\Volt;
 
 // ===== 1. REDIRECT ROOT TO LOGIN =====
 Route::redirect('/', '/login')->name('home');
+
+Route::get('/display', DisplayParkir::class)->name('display');
 
 // ===== 2. PUBLIC ROUTES (Kiosk & Mobile - Tanpa Login) =====
 Route::prefix('kiosk')->name('kiosk.')->group(function () {

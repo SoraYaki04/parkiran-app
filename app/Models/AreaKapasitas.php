@@ -19,5 +19,11 @@ class AreaKapasitas extends Model
         return $this->belongsTo(TipeKendaraan::class);
     }
 
+    public function area()
+    {
+        return $this->belongsTo(AreaParkir::class, 'area_id');
+    }
+
+
     public $timestamps = false;
 }
