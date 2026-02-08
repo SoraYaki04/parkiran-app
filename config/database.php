@@ -42,7 +42,7 @@ return [
             'prefix' => '',
             'foreign_key_constraints' => env('DB_FOREIGN_KEYS', true),
         ],
-
+        
         'mysql' => [
             'driver' => 'mysql',
             'url' => env('DATABASE_URL'),
@@ -61,7 +61,18 @@ return [
             'options' => extension_loaded('pdo_mysql') ? array_filter([
                 PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
             ]) : [],
+
+            // ===============================
+            // Tambahan untuk Spatie Backup
+            // ===============================
+            'dump' => [
+                // Path folder tempat mysqldump.exe berada
+                'dump_command_path' => 'E:\\Software\\laragon\\bin\\mysql\\mysql-8.0.30-winx64\\bin',
+                'use_single_transaction' => true,
+                'timeout' => 60 * 5, // 5 menit
+            ],
         ],
+
 
         'pgsql' => [
             'driver' => 'pgsql',

@@ -198,7 +198,7 @@ new class extends Component
         <div class="pt-4 mt-4 border-t border-gray-800">
         <p class="px-4 text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">System</p>
 
-        <a href="{{ route('settings') }}" wire:navigate.preserve-scroll
+        {{-- <a href="{{ route('settings') }}" wire:navigate.preserve-scroll
 
            class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all
            {{ request()->routeIs('settings')
@@ -206,7 +206,19 @@ new class extends Component
                 : 'text-gray-400 hover:bg-gray-800 hover:text-white' }}">
             <span class="material-symbols-outlined">settings</span>
             Settings
+        </a> --}}
+
+        {{-- BACKUP DATABASE --}}
+        <a href="{{ route('admin.backup.index') }}" wire:navigate.preserve-scroll
+
+           class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all
+           {{ request()->routeIs('admin.backup.*')
+                ? 'bg-primary/10 border-l-4 border-primary text-white'
+                : 'text-gray-400 hover:bg-gray-800 hover:text-white' }}">
+            <span class="material-symbols-outlined">backup</span>
+            Backup Database
         </a>
+
 
     @else
         {{-- PETUGAS MENU --}}

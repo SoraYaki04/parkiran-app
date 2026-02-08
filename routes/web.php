@@ -121,6 +121,10 @@ Route::middleware('auth')->group(function () {
         // ? Loh Aktivitas
         Volt::route('log_aktivitas', 'pages.admin.log_aktivitas.index')
             ->name('log_aktivitas.index');
+
+        // ? Loh Aktivitas
+        Volt::route('backup', 'pages.admin.backup.index')
+            ->name('backup.index');
         
     });
     
