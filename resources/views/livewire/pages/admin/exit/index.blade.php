@@ -172,7 +172,7 @@ class extends Component
         try {
             $parsed = $this->parseQr($this->search);
 
-            $query = ParkirSessions::with(['slot.area', 'tipeKendaraan'])
+            $query = ParkirSessions::with(['slot.area', 'tipeKendaraan', 'kendaraan.member.tier'])
                 ->where('status', 'IN_PROGRESS')
                 ->where('plat_nomor', $parsed['plat']);
 
@@ -199,79 +199,22 @@ class extends Component
 
     private function calculateBill()
     {
-        $masuk = $this->session->confirmed_at ?? $this->session->created_at;
-        $this->durationMinutes = max(1, Carbon::parse($masuk)->diffInMinutes(now()));
+        $service = new \App\Services\PricingService();
+        $result = $service->calculate($this->session);
 
+        $this->totalPrice = $result['base_price'];
+        $this->diskonPersen = $result['discount_percent'];
+        $this->diskonNominal = $result['discount_nominal'];
+        $this->totalBayarFinal = $result['final_price'];
+        
+        $this->durationMinutes = $result['duration_minutes'];
         $this->durasiHari = intdiv($this->durationMinutes, 1440);
         $sisaMenitHari = $this->durationMinutes % 1440;
         $this->durasiJam = intdiv($sisaMenitHari, 60);
         $this->durasiMenit = $sisaMenitHari % 60;
 
-        // ===== MEMBER =====
-        $kendaraan = Kendaraan::with([
-            'member' => function ($q) {
-                $q->where('status', 'aktif')
-                ->whereHas('tier', function ($t) {
-                    $t->where('status', 'aktif');
-                });
-            },
-            'member.tier'
-        ])
-        ->where('plat_nomor', $this->session->plat_nomor)
-        ->first();
-
-        $this->member = null;
-
-        if (
-            $kendaraan &&
-            $kendaraan->member &&
-            $kendaraan->member->status === 'aktif' &&
-            now()->between(
-                $kendaraan->member->tanggal_mulai,
-                $kendaraan->member->tanggal_berakhir
-            )
-        ) {
-            $this->member = $kendaraan->member;
-        }
-
-
-        // ===== TARIF NORMAL =====
-        $tarifHarian = TarifParkir::where('tipe_kendaraan_id', $this->session->tipe_kendaraan_id)
-            ->orderBy('durasi_max', 'desc')
-            ->first();
-
-        if (!$tarifHarian) {
-            $this->totalPrice = 0;
-            return;
-        }
-
-        $total = 0;
-
-        if ($this->durasiHari > 0) {
-            $total += $this->durasiHari * $tarifHarian->tarif;
-        }
-
-        if ($sisaMenitHari > 0) {
-            $tarifSisa = TarifParkir::where('tipe_kendaraan_id', $this->session->tipe_kendaraan_id)
-                ->where('durasi_min', '<=', $sisaMenitHari)
-                ->where('durasi_max', '>=', $sisaMenitHari)
-                ->first() ?? $tarifHarian;
-
-            $total += $tarifSisa->tarif;
-        }
-
-        $this->totalPrice = $total;
-
-        // ===== DISKON MEMBER =====
-        $this->diskonPersen = 0;
-        $this->diskonNominal = 0;
-
-        if ($this->member && $this->member->tier) {
-            $this->diskonPersen = $this->member->tier->diskon_persen;
-            $this->diskonNominal = round($total * ($this->diskonPersen / 100));
-        }
-
-        $this->totalBayarFinal = max(0, $total - $this->diskonNominal);
+        // Set member property for view compatibility
+        $this->member = $this->session->kendaraan?->member;
     }
 
 

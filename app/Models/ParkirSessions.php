@@ -36,4 +36,9 @@ class ParkirSessions extends Model
         return $this->belongsTo(TipeKendaraan::class, 'tipe_kendaraan_id');
     }
 
+    public function kendaraan()
+    {
+        return $this->hasOne(Kendaraan::class, 'plat_nomor', 'plat_nomor');
+    }
+
 }

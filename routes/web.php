@@ -96,6 +96,11 @@ Route::middleware('auth')->group(function () {
         // ? Manajemen Area
         Volt::route('area', 'pages.admin.area.index')
             ->name('area.index');
+
+        // ? Manajemen Pricing Rules
+        Volt::route('pricing', 'pages.admin.pricing.index')->name('pricing.index');
+        Volt::route('pricing/create', 'pages.admin.pricing.form')->name('pricing.create');
+        Volt::route('pricing/{id}/edit', 'pages.admin.pricing.form')->name('pricing.edit');
         
         // ? Manajemen Member
         Volt::route('member', 'pages.admin.member.index1')

@@ -127,6 +127,17 @@ new class extends Component
             Tarif
         </a>
 
+        {{-- PRICING RULES --}}
+        <a href="{{ route('admin.pricing.index') }}" wire:navigate.preserve-scroll
+
+           class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all
+           {{ request()->routeIs('admin.pricing.*')
+                ? 'bg-primary/10 border-l-4 border-primary text-white'
+                : 'text-gray-400 hover:bg-gray-800 hover:text-white' }}">
+            <span class="material-symbols-outlined">price_change</span>
+            Pricing Rules
+        </a>
+
         {{-- AREA PARKIR --}}
         <a href="{{ route('admin.area.index') }}" wire:navigate.preserve-scroll
 
