@@ -5,6 +5,7 @@ use App\Models\Pembayaran;
 use App\Models\TipeKendaraan;
 use App\Models\AreaParkir;
 use App\Models\SlotParkir;
+use App\Models\TransaksiParkir;
 use Livewire\Volt\Component;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
@@ -13,7 +14,7 @@ use Carbon\Carbon;
 use App\Models\ActivityLog;
 
 new #[Layout('layouts.app')]
-#[Title('Laporan')]
+#[Title('Laporan & Analytics')]
 class extends Component {
 
     public string $activeTab = 'harian';
@@ -52,8 +53,7 @@ class extends Component {
 
     public function exportHarianPdf()
     {
-
-        if ($this->activeTab === 'occupancy') {
+        if ($this->activeTab === 'occupancy' || $this->activeTab === 'analytics') {
             return;
         }
 
@@ -70,8 +70,7 @@ class extends Component {
 
     public function exportHarianExcel()
     {
-
-        if ($this->activeTab === 'occupancy') {
+        if ($this->activeTab === 'occupancy' || $this->activeTab === 'analytics') {
             return;
         }
 
@@ -88,8 +87,7 @@ class extends Component {
 
     public function exportRentangPdf()
     {
-
-        if ($this->activeTab === 'occupancy') {
+        if ($this->activeTab === 'occupancy' || $this->activeTab === 'analytics') {
             return;
         }
 
@@ -107,7 +105,7 @@ class extends Component {
 
     public function exportRentangExcel()
     {
-        if ($this->activeTab === 'occupancy') {
+        if ($this->activeTab === 'occupancy' || $this->activeTab === 'analytics') {
             return;
         }
 
@@ -123,6 +121,20 @@ class extends Component {
         ]);
     }
 
+    public function exportAnalyticsCsv()
+    {
+        $this->logActivity(
+            'EXPORT',
+            'Export analytics CSV',
+            "{$this->tanggalMulai} s/d {$this->tanggalAkhir}"
+        );
+
+        return redirect()->route('admin.export.analytics.csv', [
+            'mulai' => $this->tanggalMulai,
+            'akhir' => $this->tanggalAkhir
+        ]);
+    }
+
     /* ======================
         DATA LAPORAN HARIAN
     =======================*/
@@ -130,15 +142,12 @@ class extends Component {
     {
         $tanggal = Carbon::parse($this->tanggalHarian);
 
-        // Get finished sessions for the day
         $sessions = ParkirSessions::whereDate('confirmed_at', $tanggal)
             ->where('status', 'finished')
             ->get();
 
-        // Get pembayaran for the day
         $pembayaran = Pembayaran::whereDate('tanggal_bayar', $tanggal)->get();
 
-        // Breakdown per tipe kendaraan
         $perTipe = ParkirSessions::whereDate('confirmed_at', $tanggal)
             ->where('status', 'finished')
             ->select('tipe_kendaraan_id', DB::raw('count(*) as total'))
@@ -146,7 +155,6 @@ class extends Component {
             ->get()
             ->map(function ($item) use ($tanggal) {
                 $tipe = TipeKendaraan::find($item->tipe_kendaraan_id);
-                // Get pendapatan from pembayaran for this tipe
                 $pendapatan = Pembayaran::whereDate('tanggal_bayar', $tanggal)
                     ->whereHas('transaksiParkir', function ($q) use ($item) {
                         $q->where('tipe_kendaraan_id', $item->tipe_kendaraan_id);
@@ -157,7 +165,6 @@ class extends Component {
                 return $item;
             });
 
-        // Breakdown per metode pembayaran
         $perMetode = Pembayaran::whereDate('tanggal_bayar', $tanggal)
             ->select('metode_pembayaran', DB::raw('count(*) as total'), DB::raw('sum(total_bayar) as pendapatan'))
             ->groupBy('metode_pembayaran')
@@ -171,7 +178,6 @@ class extends Component {
         ];
     }
 
-
     /* ======================
         DATA LAPORAN RENTANG
     =======================*/
@@ -180,15 +186,12 @@ class extends Component {
         $mulai = Carbon::parse($this->tanggalMulai)->startOfDay();
         $akhir = Carbon::parse($this->tanggalAkhir)->endOfDay();
 
-        // Get finished sessions for the range
         $sessions = ParkirSessions::whereBetween('confirmed_at', [$mulai, $akhir])
             ->where('status', 'finished')
             ->get();
 
-        // Get pembayaran for the range
         $pembayaran = Pembayaran::whereBetween('tanggal_bayar', [$mulai, $akhir])->get();
 
-        // Breakdown per tipe kendaraan
         $perTipe = ParkirSessions::whereBetween('confirmed_at', [$mulai, $akhir])
             ->where('status', 'finished')
             ->select('tipe_kendaraan_id', DB::raw('count(*) as total'))
@@ -196,7 +199,6 @@ class extends Component {
             ->get()
             ->map(function ($item) use ($mulai, $akhir) {
                 $tipe = TipeKendaraan::find($item->tipe_kendaraan_id);
-                // Get pendapatan from pembayaran for this tipe
                 $pendapatan = Pembayaran::whereBetween('tanggal_bayar', [$mulai, $akhir])
                     ->whereHas('transaksiParkir', function ($q) use ($item) {
                         $q->where('tipe_kendaraan_id', $item->tipe_kendaraan_id);
@@ -207,13 +209,11 @@ class extends Component {
                 return $item;
             });
 
-        // Breakdown per metode pembayaran
         $perMetode = Pembayaran::whereBetween('tanggal_bayar', [$mulai, $akhir])
             ->select('metode_pembayaran', DB::raw('count(*) as total'), DB::raw('sum(total_bayar) as pendapatan'))
             ->groupBy('metode_pembayaran')
             ->get();
 
-        // Daily breakdown from pembayaran
         $perHari = Pembayaran::whereBetween('tanggal_bayar', [$mulai, $akhir])
             ->select(DB::raw('DATE(tanggal_bayar) as tanggal'), DB::raw('count(*) as total'), DB::raw('sum(total_bayar) as pendapatan'))
             ->groupBy(DB::raw('DATE(tanggal_bayar)'))
@@ -228,7 +228,6 @@ class extends Component {
             'per_hari' => $perHari,
         ];
     }
-
 
     /* ======================
         DATA OCCUPANCY
@@ -245,7 +244,6 @@ class extends Component {
             $kosong = $area->slots->where('status', 'kosong')->count();
             $persentase = $totalSlots > 0 ? round(($terisi / $totalSlots) * 100, 1) : 0;
 
-            // Per tipe kendaraan
             $perTipe = $area->slots->groupBy('tipe_kendaraan_id')->map(function ($slots, $tipeId) {
                 $tipe = TipeKendaraan::find($tipeId);
                 return [
@@ -269,11 +267,151 @@ class extends Component {
         return $result;
     }
 
+    /* ======================
+        ANALYTICS DATA
+    =======================*/
+
+    // Revenue per day for last 7 days (for Bar Chart)
+    public function getRevenueChartDataProperty()
+    {
+        $labels = [];
+        $data = [];
+
+        for ($i = 6; $i >= 0; $i--) {
+            $date = Carbon::today()->subDays($i);
+            $labels[] = $date->translatedFormat('D, d M');
+            $data[] = Pembayaran::whereDate('tanggal_bayar', $date)->sum('total_bayar');
+        }
+
+        return ['labels' => $labels, 'data' => $data];
+    }
+
+    // Vehicle Type Distribution (for Pie Chart)
+    public function getVehicleDistributionProperty()
+    {
+        $mulai = Carbon::parse($this->tanggalMulai)->startOfDay();
+        $akhir = Carbon::parse($this->tanggalAkhir)->endOfDay();
+
+        $distribution = ParkirSessions::whereBetween('confirmed_at', [$mulai, $akhir])
+            ->where('status', 'finished')
+            ->select('tipe_kendaraan_id', DB::raw('count(*) as total'))
+            ->groupBy('tipe_kendaraan_id')
+            ->get()
+            ->map(function ($item) {
+                $tipe = TipeKendaraan::find($item->tipe_kendaraan_id);
+                return [
+                    'label' => $tipe ? $tipe->nama_tipe : 'Unknown',
+                    'value' => $item->total,
+                ];
+            });
+
+        return $distribution->values()->toArray();
+    }
+
+    // Peak Hour Analysis
+    public function getPeakHourAnalysisProperty()
+    {
+        $mulai = Carbon::parse($this->tanggalMulai)->startOfDay();
+        $akhir = Carbon::parse($this->tanggalAkhir)->endOfDay();
+
+        $peakHours = ParkirSessions::whereBetween('confirmed_at', [$mulai, $akhir])
+            ->where('status', 'finished')
+            ->select(DB::raw('HOUR(confirmed_at) as hour'), DB::raw('count(*) as total'))
+            ->groupBy(DB::raw('HOUR(confirmed_at)'))
+            ->orderBy('total', 'desc')
+            ->take(5)
+            ->get();
+
+        $avgDuration = TransaksiParkir::whereBetween('waktu_masuk', [$mulai, $akhir])
+            ->whereNotNull('durasi_menit')
+            ->avg('durasi_menit');
+
+        return [
+            'peak_hours' => $peakHours,
+            'avg_duration' => round($avgDuration ?? 0, 1),
+        ];
+    }
+
+    // Member Performance
+    public function getMemberPerformanceProperty()
+    {
+        $mulai = Carbon::parse($this->tanggalMulai)->startOfDay();
+        $akhir = Carbon::parse($this->tanggalAkhir)->endOfDay();
+
+        $memberTransactions = TransaksiParkir::whereBetween('waktu_masuk', [$mulai, $akhir])
+            ->whereNotNull('member_id')
+            ->count();
+
+        $nonMemberTransactions = TransaksiParkir::whereBetween('waktu_masuk', [$mulai, $akhir])
+            ->whereNull('member_id')
+            ->count();
+
+        $memberRevenue = TransaksiParkir::whereBetween('waktu_masuk', [$mulai, $akhir])
+            ->whereNotNull('member_id')
+            ->join('pembayaran', 'transaksi_parkir.id', '=', 'pembayaran.transaksi_parkir_id')
+            ->sum('pembayaran.total_bayar');
+
+        $nonMemberRevenue = TransaksiParkir::whereBetween('waktu_masuk', [$mulai, $akhir])
+            ->whereNull('member_id')
+            ->join('pembayaran', 'transaksi_parkir.id', '=', 'pembayaran.transaksi_parkir_id')
+            ->sum('pembayaran.total_bayar');
+
+        return [
+            'member_transactions' => $memberTransactions,
+            'non_member_transactions' => $nonMemberTransactions,
+            'member_revenue' => $memberRevenue,
+            'non_member_revenue' => $nonMemberRevenue,
+        ];
+    }
+
+    // Payment Method Distribution (for Pie Chart)
+    public function getPaymentMethodDistributionProperty()
+    {
+        $mulai = Carbon::parse($this->tanggalMulai)->startOfDay();
+        $akhir = Carbon::parse($this->tanggalAkhir)->endOfDay();
+
+        $distribution = Pembayaran::whereBetween('tanggal_bayar', [$mulai, $akhir])
+            ->select('metode_pembayaran', DB::raw('sum(total_bayar) as total'))
+            ->groupBy('metode_pembayaran')
+            ->get()
+            ->map(function ($item) {
+                return [
+                    'label' => ucfirst($item->metode_pembayaran ?? 'Lainnya'),
+                    'value' => $item->total,
+                ];
+            });
+
+        return $distribution->values()->toArray();
+    }
+
+    // Occupancy Trend (for Line Chart)
+    public function getOccupancyTrendProperty()
+    {
+        $labels = [];
+        $data = [];
+
+        for ($i = 6; $i >= 0; $i--) {
+            $date = Carbon::today()->subDays($i);
+            $labels[] = $date->translatedFormat('D, d M');
+
+            $finishedCount = ParkirSessions::whereDate('confirmed_at', $date)
+                ->where('status', 'finished')
+                ->count();
+
+            $totalSlots = SlotParkir::count();
+            $occupancyRate = $totalSlots > 0 ? round(($finishedCount / $totalSlots) * 100, 1) : 0;
+            $data[] = min($occupancyRate, 100);
+        }
+
+        return ['labels' => $labels, 'data' => $data];
+    }
+
     public function setTab($tab)
     {
         $this->activeTab = $tab;
     }
 };
+
 ?>
 
 <div class="flex-1 flex-col h-full overflow-hidden flex">
@@ -281,14 +419,14 @@ class extends Component {
     {{-- HEADER --}}
     <header class="px-8 py-6 border-b border-gray-800 flex justify-between items-center">
         <div>
-            <h2 class="text-white text-3xl font-black">Laporan</h2>
-            <p class="text-slate-400">Statistik & analisis pendapatan</p>
+            <h2 class="text-white text-3xl font-black">Laporan & Analytics</h2>
+            <p class="text-slate-400">Statistik, analisis pendapatan & visualisasi data</p>
         </div>
 
         {{-- EXPORT DROPDOWN --}}
         <div x-data="{ open: false }" class="relative">
             <button @click="open = !open" @click.away="open = false"
-                class="{{ $activeTab === 'occupancy' ? 'opacity-50 cursor-not-allowed' : '' }} flex items-center gap-2 bg-primary text-black px-4 py-2 rounded-lg font-bold text-sm shadow-lg shadow-primary/20"
+                class="{{ ($activeTab === 'occupancy') ? 'opacity-50 cursor-not-allowed' : '' }} flex items-center gap-2 bg-primary text-black px-4 py-2 rounded-lg font-bold text-sm shadow-lg shadow-primary/20"
                 @if($activeTab === 'occupancy') disabled @endif
                 >
                 <span class="material-symbols-outlined text-lg">download</span>
@@ -324,6 +462,13 @@ class extends Component {
                         Excel Rentang
                     </button>
 
+                @elseif($activeTab === 'analytics')
+                    <button wire:click="exportAnalyticsCsv"
+                        class="w-full text-left flex items-center gap-3 px-4 py-3 text-white hover:bg-white/5 transition text-sm">
+                        <span class="material-symbols-outlined text-blue-400">csv</span>
+                        CSV Analytics
+                    </button>
+
                 @endif
             </div>
         </div>
@@ -345,6 +490,10 @@ class extends Component {
             <button wire:click="setTab('occupancy')"
                 class="px-4 py-2 rounded-lg font-bold text-xs transition {{ $activeTab === 'occupancy' ? 'bg-primary text-black' : 'text-slate-400 hover:text-white' }}">
                 Occupancy
+            </button>
+            <button wire:click="setTab('analytics')"
+                class="px-4 py-2 rounded-lg font-bold text-xs transition {{ $activeTab === 'analytics' ? 'bg-primary text-black' : 'text-slate-400 hover:text-white' }}">
+                    Analytics
             </button>
         </div>
 
@@ -378,6 +527,19 @@ class extends Component {
                     Real-time Data Terupdate
                 </div>
             @endif
+
+            @if($activeTab === 'analytics')
+                <div class="flex items-center gap-2 px-3 border-r border-[#3E4C59]">
+                    <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Dari</span>
+                    <input type="date" wire:model.live="tanggalMulai"
+                        class="bg-transparent border-none text-white text-xs font-semibold focus:ring-1 focus:ring-primary [color-scheme:dark] cursor-pointer">
+                </div>
+                <div class="flex items-center gap-2 px-3">
+                    <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Sampai</span>
+                    <input type="date" wire:model.live="tanggalAkhir"
+                        class="bg-transparent border-none text-white text-xs font-semibold focus:ring-1 focus:ring-primary [color-scheme:dark] cursor-pointer">
+                </div>
+            @endif
         </div>
     </div>
 
@@ -386,7 +548,7 @@ class extends Component {
         
         <div class="space-y-6">
             {{-- SUMMARY CARDS (Lebih Kecil) --}}
-            @if($activeTab !== 'occupancy')
+            @if($activeTab !== 'occupancy' && $activeTab !== 'analytics')
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div class="bg-surface-dark p-4 rounded-xl border border-[#3E4C59]">
                     <p class="text-slate-500 text-[10px] font-bold uppercase tracking-wider">Total Transaksi</p>
@@ -509,6 +671,101 @@ class extends Component {
                 @endforeach
             </div>
             @endif
+
+            {{-- ==================== ANALYTICS TAB ==================== --}}
+            @if($activeTab === 'analytics')
+            <div class="space-y-6" 
+                 wire:key="analytics-tab"
+                 x-data="analyticsCharts(@js($this->revenueChartData), @js($this->vehicleDistribution), @js($this->occupancyTrend), @js($this->paymentMethodDistribution))"
+                 x-init="initCharts()">
+
+                {{-- Summary Cards --}}
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {{-- Member Transactions --}}
+                    <div class="bg-surface-dark p-4 rounded-xl border border-[#3E4C59]">
+                        <p class="text-slate-500 text-[10px] font-bold uppercase tracking-wider">Transaksi Member</p>
+                        <p class="text-blue-400 text-xl font-black mt-1">{{ number_format($this->memberPerformance['member_transactions']) }}</p>
+                    </div>
+                    {{-- Non-Member Transactions --}}
+                    <div class="bg-surface-dark p-4 rounded-xl border border-[#3E4C59]">
+                        <p class="text-slate-500 text-[10px] font-bold uppercase tracking-wider">Transaksi Non-Member</p>
+                        <p class="text-orange-400 text-xl font-black mt-1">{{ number_format($this->memberPerformance['non_member_transactions']) }}</p>
+                    </div>
+                    {{-- Member Revenue --}}
+                    <div class="bg-surface-dark p-4 rounded-xl border border-[#3E4C59]">
+                        <p class="text-slate-500 text-[10px] font-bold uppercase tracking-wider">Revenue Member</p>
+                        <p class="text-green-400 text-xl font-black mt-1">Rp {{ number_format($this->memberPerformance['member_revenue'], 0, ',', '.') }}</p>
+                    </div>
+                    {{-- Avg Duration --}}
+                    <div class="bg-surface-dark p-4 rounded-xl border border-[#3E4C59]">
+                        <p class="text-slate-500 text-[10px] font-bold uppercase tracking-wider">Rata-rata Durasi</p>
+                        <p class="text-purple-400 text-xl font-black mt-1">{{ $this->peakHourAnalysis['avg_duration'] }} menit</p>
+                    </div>
+                </div>
+
+                {{-- Charts Row 1 --}}
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {{-- Revenue Bar Chart --}}
+                    <div class="bg-surface-dark border border-[#3E4C59] rounded-xl p-5">
+                        <h3 class="text-white text-xs font-black uppercase tracking-widest mb-4">Pendapatan 7 Hari Terakhir</h3>
+                        <div class="h-64">
+                            <canvas id="revenueBarChart"></canvas>
+                        </div>
+                    </div>
+
+                    {{-- Vehicle Distribution Pie Chart --}}
+                    <div class="bg-surface-dark border border-[#3E4C59] rounded-xl p-5">
+                        <h3 class="text-white text-xs font-black uppercase tracking-widest mb-4">Distribusi Tipe Kendaraan</h3>
+                        <div class="h-64 flex items-center justify-center">
+                            <canvas id="vehiclePieChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Charts Row 2 --}}
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {{-- Occupancy Line Chart --}}
+                    <div class="bg-surface-dark border border-[#3E4C59] rounded-xl p-5">
+                        <h3 class="text-white text-xs font-black uppercase tracking-widest mb-4">Trend Occupancy (7 Hari)</h3>
+                        <div class="h-64">
+                            <canvas id="occupancyLineChart"></canvas>
+                        </div>
+                    </div>
+
+                    {{-- Payment Method Pie Chart --}}
+                    <div class="bg-surface-dark border border-[#3E4C59] rounded-xl p-5">
+                        <h3 class="text-white text-xs font-black uppercase tracking-widest mb-4">Metode Pembayaran</h3>
+                        <div class="h-64 flex items-center justify-center">
+                            <canvas id="paymentPieChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Peak Hours Table --}}
+                <div class="bg-surface-dark border border-[#3E4C59] rounded-xl overflow-hidden">
+                    <div class="bg-gray-900/60 px-5 py-3 border-b border-[#3E4C59]">
+                        <h3 class="text-white text-xs font-black uppercase tracking-widest">Top 5 Jam Tersibuk</h3>
+                    </div>
+                    <table class="w-full text-left text-sm">
+                        <thead>
+                            <tr class="bg-gray-900/40 text-[10px] text-slate-500 uppercase font-bold">
+                                <th class="px-6 py-3">Jam</th>
+                                <th class="px-6 py-3 text-right">Total Kendaraan</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-[#3E4C59]">
+                            @foreach($this->peakHourAnalysis['peak_hours'] as $item)
+                            <tr class="hover:bg-surface-hover transition-colors">
+                                <td class="px-6 py-3 text-white font-mono">{{ str_pad($item->hour, 2, '0', STR_PAD_LEFT) }}:00 - {{ str_pad($item->hour + 1, 2, '0', STR_PAD_LEFT) }}:00</td>
+                                <td class="px-6 py-3 text-right text-primary font-bold">{{ number_format($item->total) }}</td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+
+            </div>
+            @endif
         </div>
 
     </div>
@@ -540,4 +797,146 @@ class extends Component {
         }
     }
 </style>
+@endpush
+
+@push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+// Alpine.js component for analytics charts
+document.addEventListener('alpine:init', () => {
+    Alpine.data('analyticsCharts', (revenueData, vehicleData, occupancyData, paymentData) => ({
+        chartInstances: {},
+        revenueData: revenueData,
+        vehicleData: vehicleData,
+        occupancyData: occupancyData,
+        paymentData: paymentData,
+
+        initCharts() {
+            // Small delay to ensure canvas elements are in DOM
+            this.$nextTick(() => {
+                this.renderCharts();
+            });
+        },
+
+        renderCharts() {
+            // Destroy existing charts
+            Object.values(this.chartInstances).forEach(chart => {
+                if (chart) chart.destroy();
+            });
+            this.chartInstances = {};
+
+            // Chart.js default styling for dark mode
+            Chart.defaults.color = '#94a3b8';
+            Chart.defaults.borderColor = '#3E4C59';
+
+            // Revenue Bar Chart
+            const revenueCtx = document.getElementById('revenueBarChart');
+            if (revenueCtx && this.revenueData) {
+                this.chartInstances.revenue = new Chart(revenueCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: this.revenueData.labels || [],
+                        datasets: [{
+                            label: 'Pendapatan (Rp)',
+                            data: this.revenueData.data || [],
+                            backgroundColor: 'rgba(34, 197, 94, 0.7)',
+                            borderColor: 'rgba(34, 197, 94, 1)',
+                            borderWidth: 1,
+                            borderRadius: 6,
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: { callback: value => 'Rp ' + value.toLocaleString('id-ID') }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Vehicle Pie Chart
+            const vehicleCtx = document.getElementById('vehiclePieChart');
+            if (vehicleCtx && this.vehicleData && this.vehicleData.length > 0) {
+                this.chartInstances.vehicle = new Chart(vehicleCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: this.vehicleData.map(v => v.label),
+                        datasets: [{
+                            data: this.vehicleData.map(v => v.value),
+                            backgroundColor: ['#3b82f6', '#f97316', '#22c55e', '#a855f7', '#eab308', '#ec4899'],
+                            borderWidth: 0,
+                            hoverOffset: 4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { position: 'right' } }
+                    }
+                });
+            }
+
+            // Occupancy Line Chart
+            const occupancyCtx = document.getElementById('occupancyLineChart');
+            if (occupancyCtx && this.occupancyData) {
+                this.chartInstances.occupancy = new Chart(occupancyCtx, {
+                    type: 'line',
+                    data: {
+                        labels: this.occupancyData.labels || [],
+                        datasets: [{
+                            label: 'Occupancy Rate (%)',
+                            data: this.occupancyData.data || [],
+                            borderColor: '#3b82f6',
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            tension: 0.4,
+                            fill: true,
+                            pointBackgroundColor: '#3b82f6',
+                            pointRadius: 4,
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                max: 100,
+                                ticks: { callback: value => value + '%' }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Payment Pie Chart
+            const paymentCtx = document.getElementById('paymentPieChart');
+            if (paymentCtx && this.paymentData && this.paymentData.length > 0) {
+                this.chartInstances.payment = new Chart(paymentCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: this.paymentData.map(p => p.label),
+                        datasets: [{
+                            data: this.paymentData.map(p => p.value),
+                            backgroundColor: ['#22c55e', '#3b82f6', '#f97316', '#a855f7', '#eab308'],
+                            borderWidth: 0,
+                            hoverOffset: 4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { position: 'right' } }
+                    }
+                });
+            }
+        }
+    }));
+});
+</script>
 @endpush
