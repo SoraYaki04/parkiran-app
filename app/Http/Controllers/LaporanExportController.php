@@ -164,4 +164,66 @@ class LaporanExportController extends Controller
         $pdf = Pdf::loadView('exports.laporan-occupancy', ['occupancy' => $occupancy]);
         return $pdf->download('laporan-occupancy-' . now()->format('Y-m-d-His') . '.pdf');
     }
+
+    public function csvAnalytics(Request $request)
+    {
+        $mulai = Carbon::parse($request->get('mulai', now()->subDays(7)->format('Y-m-d')))->startOfDay();
+        $akhir = Carbon::parse($request->get('akhir', now()->format('Y-m-d')))->endOfDay();
+
+        // Daily Revenue
+        $dailyRevenue = Pembayaran::whereBetween('tanggal_bayar', [$mulai, $akhir])
+            ->select(DB::raw('DATE(tanggal_bayar) as tanggal'), DB::raw('sum(total_bayar) as pendapatan'), DB::raw('count(*) as transaksi'))
+            ->groupBy(DB::raw('DATE(tanggal_bayar)'))
+            ->orderBy('tanggal')
+            ->get();
+
+        // Vehicle Distribution
+        $vehicleDistribution = ParkirSessions::whereBetween('confirmed_at', [$mulai, $akhir])
+            ->where('status', 'finished')
+            ->select('tipe_kendaraan_id', DB::raw('count(*) as total'))
+            ->groupBy('tipe_kendaraan_id')
+            ->get()
+            ->map(function ($item) {
+                $tipe = TipeKendaraan::find($item->tipe_kendaraan_id);
+                return [
+                    'tipe' => $tipe ? $tipe->nama_tipe : 'Unknown',
+                    'total' => $item->total,
+                ];
+            });
+
+        // Payment Methods
+        $paymentMethods = Pembayaran::whereBetween('tanggal_bayar', [$mulai, $akhir])
+            ->select('metode_pembayaran', DB::raw('sum(total_bayar) as pendapatan'), DB::raw('count(*) as transaksi'))
+            ->groupBy('metode_pembayaran')
+            ->get();
+
+        // Build CSV content
+        $csv = "=== LAPORAN ANALYTICS ===\n";
+        $csv .= "Periode: " . $mulai->format('d M Y') . " - " . $akhir->format('d M Y') . "\n\n";
+
+        $csv .= "=== PENDAPATAN HARIAN ===\n";
+        $csv .= "Tanggal,Transaksi,Pendapatan (Rp)\n";
+        foreach ($dailyRevenue as $row) {
+            $csv .= "{$row->tanggal},{$row->transaksi},{$row->pendapatan}\n";
+        }
+
+        $csv .= "\n=== DISTRIBUSI KENDARAAN ===\n";
+        $csv .= "Tipe Kendaraan,Jumlah\n";
+        foreach ($vehicleDistribution as $row) {
+            $csv .= "{$row['tipe']},{$row['total']}\n";
+        }
+
+        $csv .= "\n=== METODE PEMBAYARAN ===\n";
+        $csv .= "Metode,Transaksi,Pendapatan (Rp)\n";
+        foreach ($paymentMethods as $row) {
+            $metode = ucfirst($row->metode_pembayaran ?? 'Lainnya');
+            $csv .= "{$metode},{$row->transaksi},{$row->pendapatan}\n";
+        }
+
+        $filename = 'analytics-' . $mulai->format('Y-m-d') . '-sampai-' . $akhir->format('Y-m-d') . '.csv';
+
+        return response($csv)
+            ->header('Content-Type', 'text/csv')
+            ->header('Content-Disposition', 'attachment; filename="' . $filename . '"');
+    }
 }
