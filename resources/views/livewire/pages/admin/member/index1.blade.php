@@ -21,12 +21,13 @@ class extends Component
     public $nama;
     public $no_hp;
     public $tier_member_id;
-    public $tipe_kendaraan_id; // Pilihan tipe kendaraan
     public $tanggal_mulai;
     public $tanggal_berakhir;
     public $status = 'aktif';
-    public $plat_search = '';
     public $isEdit = false;
+
+    // Multi-plat: array of plates [{plat, tipe_kendaraan_id}]
+    public array $plates = [];
 
     public string $search = '';
     public string $filterTier = '';
@@ -65,11 +66,13 @@ class extends Component
 
     public function getMembersProperty()
     {
-        return Member::with(['kendaraan', 'tier'])
+        return Member::with(['kendaraan.tipeKendaraan', 'tier'])
             ->when($this->search, fn($q) =>
-                $q->where('kode_member','like',"%{$this->search}%")
-                  ->orWhere('nama','like',"%{$this->search}%")
-                  ->orWhereHas('kendaraan', fn($k) => $k->where('plat_nomor','like',"%{$this->search}%"))
+                $q->where(function ($query) {
+                    $query->where('kode_member','like',"%{$this->search}%")
+                          ->orWhere('nama','like',"%{$this->search}%")
+                          ->orWhereHas('kendaraan', fn($k) => $k->where('plat_nomor','like',"%{$this->search}%"));
+                })
             )
             ->when($this->filterTier, fn($q)=> $q->where('tier_member_id', $this->filterTier))
             ->when($this->filterStatus, fn($q)=> $q->where('status', $this->filterStatus))
@@ -105,10 +108,23 @@ class extends Component
         match ($tier->periode) {
             'bulanan' => $akhir = $mulai->copy()->addMonth(),
             'tahunan' => $akhir = $mulai->copy()->addYear(),
-            default   => $akhir = $mulai->copy()->addDays($tier->masa_berlaku_hari ?? 0),
         };
 
         $this->tanggal_berakhir = $akhir->format('Y-m-d');
+    }
+
+    /* ===============================
+        PLATE HELPERS
+    =============================== */
+    public function addPlate()
+    {
+        $this->plates[] = ['plat' => '', 'tipe_kendaraan_id' => ''];
+    }
+
+    public function removePlate($index)
+    {
+        unset($this->plates[$index]);
+        $this->plates = array_values($this->plates);
     }
 
     /* ===============================
@@ -117,14 +133,15 @@ class extends Component
     public function create()
     {
         $this->reset([
-            'memberId','tier_member_id','tipe_kendaraan_id',
-            'plat_search','tanggal_berakhir','nama','no_hp'
+            'memberId','tier_member_id',
+            'tanggal_berakhir','nama','no_hp','plates'
         ]);
 
         $this->tanggal_mulai = now()->toDateString();
         $this->kode_member   = $this->generateKodeMember();
         $this->status        = 'aktif';
         $this->isEdit        = false;
+        $this->plates        = [['plat' => '', 'tipe_kendaraan_id' => '']];
 
         $this->dispatch('open-modal');
     }
@@ -140,12 +157,20 @@ class extends Component
         $this->kode_member      = $m->kode_member;
         $this->nama             = $m->nama;
         $this->no_hp            = $m->no_hp;
-        $this->plat_search      = $m->kendaraan->plat_nomor;
-        $this->tipe_kendaraan_id= $m->kendaraan->tipe_kendaraan_id ?? null;
         $this->tier_member_id   = $m->tier_member_id;
         $this->tanggal_mulai    = $m->tanggal_mulai;
         $this->tanggal_berakhir = $m->tanggal_berakhir;
         $this->status           = $m->status;
+
+        // Load existing plates
+        $this->plates = $m->kendaraan->map(fn($k) => [
+            'plat' => $k->plat_nomor,
+            'tipe_kendaraan_id' => $k->tipe_kendaraan_id,
+        ])->toArray();
+
+        if (empty($this->plates)) {
+            $this->plates = [['plat' => '', 'tipe_kendaraan_id' => '']];
+        }
 
         $this->isEdit = true;
         $this->dispatch('open-modal');
@@ -158,7 +183,9 @@ class extends Component
     {
         $member = Member::findOrFail($id);
 
-        // LOG SEBELUM DELETE
+        // Lepaskan semua kendaraan dari member
+        Kendaraan::where('member_id', $member->id)->update(['member_id' => null]);
+
         $this->logActivity(
             'DELETE_MEMBER',
             'Menghapus member',
@@ -192,64 +219,126 @@ class extends Component
     public function save()
     {
         $this->validate([
-            'nama'           => 'required|string|max:255',
-            'no_hp'          => 'required|string|max:20',
-            'plat_search'    => 'required|string|max:20',
-            'tipe_kendaraan_id' => 'required|exists:tipe_kendaraan,id',
-            'tier_member_id' => 'required|exists:tier_member,id',
+            'nama'               => 'required|string|max:255',
+            'no_hp'              => 'required|string|max:20',
+            'tier_member_id'     => 'required|exists:tier_member,id',
+            'plates'             => 'required|array|min:1',
+            'plates.*.plat'      => 'required|string|max:20',
+            'plates.*.tipe_kendaraan_id' => 'required|exists:tipe_kendaraan,id',
+        ], [
+            'plates.required' => 'Minimal 1 plat kendaraan diperlukan.',
+            'plates.*.plat.required' => 'Plat nomor wajib diisi.',
+            'plates.*.tipe_kendaraan_id.required' => 'Tipe kendaraan wajib dipilih.',
         ]);
 
-        try {
-            $platDB = $this->normalizePlat($this->plat_search);
-        } catch (\Exception $e) {
-            $this->dispatch('notify', message: $e->getMessage(), type: 'error');
-            return;
-        }
-
-        $kendaraan = Kendaraan::where('plat_nomor', $platDB)->first();
-
-        if (!$kendaraan) {
-            $kendaraan = Kendaraan::create([
-                'plat_nomor' => $platDB,
-                'tipe_kendaraan_id' => $this->tipe_kendaraan_id,
-            ]);
-
-            $this->logActivity(
-                'CREATE_KENDARAAN',
-                'Menambahkan kendaraan baru dari form member',
-                "ID {$kendaraan->id} ({$kendaraan->plat_nomor})"
-            );
-        } else {
-            if ($kendaraan->tipe_kendaraan_id != $this->tipe_kendaraan_id) {
-                $kendaraan->update(['tipe_kendaraan_id' => $this->tipe_kendaraan_id]);
+        // Normalize all plates
+        $normalizedPlates = [];
+        foreach ($this->plates as $p) {
+            try {
+                $platDB = $this->normalizePlat($p['plat']);
+                $normalizedPlates[] = [
+                    'plat' => $platDB,
+                    'tipe_kendaraan_id' => $p['tipe_kendaraan_id'],
+                ];
+            } catch (\Exception $e) {
+                $this->dispatch('notify', message: "Plat '{$p['plat']}': {$e->getMessage()}", type: 'error');
+                return;
             }
         }
 
-        $member = Member::updateOrCreate(
-            ['id' => $this->memberId],
-            [
-                'kode_member'      => $this->kode_member,
+        // Cek duplikat plat dalam input
+        $platValues = array_column($normalizedPlates, 'plat');
+        if (count($platValues) !== count(array_unique($platValues))) {
+            $this->dispatch('notify', message: 'Terdapat plat nomor duplikat!', type: 'error');
+            return;
+        }
+
+        /* ===============================
+            MEMBER (SOFT DELETE LOGIC)
+        =============================== */
+        $member = Member::withTrashed()
+            ->where('kode_member', $this->kode_member)
+            ->first();
+
+        if ($member) {
+            if ($member->trashed()) {
+                $member->restore();
+            }
+
+            $member->update([
                 'nama'             => $this->nama,
                 'no_hp'            => $this->no_hp,
-                'kendaraan_id'     => $kendaraan->id,
                 'tier_member_id'   => $this->tier_member_id,
                 'tanggal_mulai'    => $this->tanggal_mulai,
                 'tanggal_berakhir' => $this->tanggal_berakhir,
                 'status'           => $this->isEdit ? $this->status : 'aktif',
-            ]
+            ]);
+
+            $this->logActivity(
+                $this->isEdit ? 'UPDATE_MEMBER' : 'RESTORE_MEMBER',
+                $this->isEdit ? 'Update data member' : 'Restore dan update member lama',
+                "ID {$member->id} ({$member->kode_member})"
+            );
+
+        } else {
+            $member = Member::create([
+                'kode_member'      => $this->kode_member,
+                'nama'             => $this->nama,
+                'no_hp'            => $this->no_hp,
+                'tier_member_id'   => $this->tier_member_id,
+                'tanggal_mulai'    => $this->tanggal_mulai,
+                'tanggal_berakhir' => $this->tanggal_berakhir,
+                'status'           => 'aktif',
+            ]);
+
+            $this->logActivity(
+                'CREATE_MEMBER',
+                'Menambahkan member baru',
+                "ID {$member->id} ({$member->kode_member})"
+            );
+        }
+
+        /* ===============================
+            KENDARAAN (MULTI-PLAT)
+        =============================== */
+        // Lepas semua kendaraan lama dari member ini
+        Kendaraan::where('member_id', $member->id)->update(['member_id' => null]);
+
+        // Assign kendaraan baru
+        foreach ($normalizedPlates as $plate) {
+            $kendaraan = Kendaraan::where('plat_nomor', $plate['plat'])->first();
+
+            if (!$kendaraan) {
+                $kendaraan = Kendaraan::create([
+                    'plat_nomor' => $plate['plat'],
+                    'tipe_kendaraan_id' => $plate['tipe_kendaraan_id'],
+                    'member_id' => $member->id,
+                ]);
+            } else {
+                $kendaraan->update([
+                    'tipe_kendaraan_id' => $plate['tipe_kendaraan_id'],
+                    'member_id' => $member->id,
+                ]);
+            }
+        }
+
+        $this->dispatch('notify',
+            message: 'Data member berhasil disimpan!',
+            type: 'success'
         );
 
-        $this->logActivity(
-            $this->isEdit ? 'UPDATE_MEMBER' : 'CREATE_MEMBER',
-            $this->isEdit ? 'Update data member' : 'Menambahkan member baru',
-            "ID {$member->id} ({$member->kode_member})"
-        );
+        $this->reset([
+            'memberId',
+            'plates',
+            'nama',
+            'no_hp',
+            'tier_member_id',
+            'tanggal_berakhir'
+        ]);
 
-        $this->dispatch('notify', message: $this->isEdit ? 'Member berhasil diperbarui!' : 'Member baru berhasil ditambahkan!', type: 'success');
-
-        $this->reset(['memberId', 'plat_search', 'nama', 'no_hp', 'tier_member_id', 'tanggal_berakhir']);
         $this->dispatch('close-modal');
     }
+
 
 
     /* ===============================
@@ -259,7 +348,8 @@ class extends Component
     {
         $tahun = now()->year;
 
-        $last = Member::whereYear('created_at',$tahun)
+        $last = Member::withTrashed()
+            ->whereYear('created_at', $tahun)
             ->orderByDesc('id')
             ->first();
 
@@ -267,12 +357,11 @@ class extends Component
             ? ((int) substr($last->kode_member, -4)) + 1
             : 1;
 
-        return 'MBR-'.$tahun.'-'.str_pad($urutan,4,'0',STR_PAD_LEFT);
+        return 'MBR-' . $tahun . '-' . str_pad($urutan, 4, '0', STR_PAD_LEFT);
     }
+
 };
 ?>
-
-
 
 
 
@@ -302,7 +391,7 @@ class extends Component
             <div class="flex flex-col md:flex-row gap-4">
                 <input wire:model.live="search"
                     class="w-full bg-gray-900 border border-[#3E4C59] rounded-lg px-4 py-2 text-white"
-                    placeholder="Cari kode / plat kendaraan">
+                    placeholder="Cari kode / nama / plat kendaraan">
 
                 <select wire:model.live="filterTier"
                         class="bg-gray-900 border border-[#3E4C59] rounded-lg px-4 py-2 text-white">
@@ -310,6 +399,14 @@ class extends Component
                     @foreach($this->tiers as $t)
                         <option value="{{ $t->id }}">{{ $t->nama }}</option>
                     @endforeach
+                </select>
+
+                <select wire:model.live="filterStatus"
+                        class="bg-gray-900 border border-[#3E4C59] rounded-lg px-4 py-2 text-white">
+                    <option value="">Semua Status</option>
+                    <option value="aktif">Aktif</option>
+                    <option value="nonaktif">Nonaktif</option>
+                    <option value="expired">Expired</option>
                 </select>
             </div>
         </div>
@@ -322,6 +419,7 @@ class extends Component
                 <thead class="bg-gray-900 sticky top-0 z-10">
                     <tr>
                         <th class="px-6 py-4 text-xs text-slate-400 text-left">Member ID</th>
+                        <th class="px-6 py-4 text-xs text-slate-400 text-left">Nama</th>
                         <th class="px-6 py-4 text-xs text-slate-400 text-left">Plat Nomor</th>
                         <th class="px-6 py-4 text-xs text-slate-400 text-center">Tier</th>
                         <th class="px-6 py-4 text-xs text-slate-400 text-center">Tanggal Berakhir</th>
@@ -338,7 +436,20 @@ class extends Component
                             </td>
 
                             <td class="px-6 py-4 text-white text-left">
-                                {{ $m->kendaraan->plat_nomor }}
+                                {{ $m->nama }}
+                            </td>
+
+                            <td class="px-6 py-4 text-left">
+                                <div class="flex flex-wrap gap-1">
+                                    @forelse($m->kendaraan as $k)
+                                        <span class="inline-flex items-center gap-1 px-2 py-1 text-xs rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                                            <span class="material-symbols-outlined text-[14px]">directions_car</span>
+                                            {{ $k->plat_nomor }}
+                                        </span>
+                                    @empty
+                                        <span class="text-slate-500 text-xs">-</span>
+                                    @endforelse
+                                </div>
                             </td>
 
                             <td class="px-6 py-4 text-center">
@@ -373,7 +484,7 @@ class extends Component
                                         <span class="material-symbols-outlined">edit</span>
                                     </button>
                                     <button wire:click="delete({{ $m->id }})"
-                                        onclick="return confirm('Hapus member ini?')"
+                                        wire:confirm="Hapus member ini?"
                                         class="text-red-400">
                                         <span class="material-symbols-outlined">delete</span>
                                     </button>
@@ -382,7 +493,7 @@ class extends Component
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="py-10 text-center text-slate-400">
+                            <td colspan="7" class="py-10 text-center text-slate-400">
                                 Tidak ada member ditemukan
                             </td>
                         </tr>
@@ -401,7 +512,7 @@ class extends Component
         x-transition
         class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
 
-        <div class="bg-card-dark w-full max-w-md p-6 rounded-xl">
+        <div class="bg-card-dark w-full max-w-lg p-6 rounded-xl max-h-[90vh] overflow-y-auto">
 
             {{-- TITLE --}}
             <h3 class="text-white font-bold mb-4">
@@ -416,7 +527,7 @@ class extends Component
                     <input wire:model="kode_member"
                         readonly
                         class="w-full bg-gray-700 border border-gray-600
-                            rounded-lg px-4 py-2 text-gray-300 cursor-not-allowed"
+                            rounded-lg px-4 py-2 text-gray-300 cursor-not-allowed">
                 </div>
 
                 {{-- NAMA --}}
@@ -435,27 +546,49 @@ class extends Component
                         placeholder="Masukkan nomor HP">
                 </div>
 
-                {{-- PILIH TIPE KENDARAAN --}}
+                {{-- KENDARAAN (MULTI-PLAT) --}}
                 <div>
-                    <label class="text-sm text-gray-400">Tipe Kendaraan</label>
-                    <select wire:model="tipe_kendaraan_id"
-                            class="w-full bg-[#161e25] border border-[#3E4C59] rounded-lg px-4 py-2 text-white">
-                        <option value="">Pilih Tipe Kendaraan</option>
-                        @foreach($this->tipeKendaraans as $t)
-                            <option value="{{ $t->id }}">{{ $t->nama_tipe }}</option>
-                        @endforeach
-                    </select>
-                </div>
+                    <div class="flex items-center justify-between mb-2">
+                        <label class="text-sm text-gray-400">Kendaraan</label>
+                        <button type="button" wire:click="addPlate"
+                            class="flex items-center gap-1 text-xs text-primary hover:text-primary/80 transition">
+                            <span class="material-symbols-outlined text-[16px]">add_circle</span>
+                            Tambah Plat
+                        </button>
+                    </div>
 
-                <div>
-                    <label class="text-sm text-gray-400">Plat Nomor</label>
-                    <input 
-                        wire:model.live="plat_search" 
-                        id="plat-input"
-                        class="w-full rounded-xl bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 h-16 pl-5 pr-4 text-lg font-bold uppercase focus:border-primary-500 focus:ring-0 transition-all text-slate-900 dark:text-white" 
-                        placeholder="INPUT PLAT"
-                        oninput="formatPlatDash(this)"
-                    />
+                    <div class="space-y-2">
+                        @foreach($plates as $index => $plate)
+                            <div class="flex gap-2 items-start p-3 bg-[#0d1117] border border-[#3E4C59] rounded-lg">
+                                <div class="flex-1 space-y-2">
+                                    <input 
+                                        wire:model="plates.{{ $index }}.plat" 
+                                        class="w-full rounded-lg bg-[#161e25] border border-[#3E4C59] px-3 py-2 text-sm font-bold uppercase text-white"
+                                        placeholder="Contoh: B-1234-ABC"
+                                        oninput="formatPlatDash(this)"
+                                    />
+                                    <select wire:model="plates.{{ $index }}.tipe_kendaraan_id"
+                                            class="w-full bg-[#161e25] border border-[#3E4C59] rounded-lg px-3 py-2 text-sm text-white">
+                                        <option value="">Tipe Kendaraan</option>
+                                        @foreach($this->tipeKendaraans as $t)
+                                            <option value="{{ $t->id }}">{{ $t->nama_tipe }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+
+                                @if(count($plates) > 1)
+                                    <button type="button" wire:click="removePlate({{ $index }})"
+                                        class="mt-2 text-red-400 hover:text-red-300 transition">
+                                        <span class="material-symbols-outlined text-[20px]">close</span>
+                                    </button>
+                                @endif
+                            </div>
+                        @endforeach
+                    </div>
+
+                    @error('plates') <span class="text-red-400 text-xs">{{ $message }}</span> @enderror
+                    @error('plates.*.plat') <span class="text-red-400 text-xs">{{ $message }}</span> @enderror
+                    @error('plates.*.tipe_kendaraan_id') <span class="text-red-400 text-xs">{{ $message }}</span> @enderror
                 </div>
 
                 {{-- TIER --}}
@@ -478,7 +611,7 @@ class extends Component
                         wire:model="tanggal_mulai"
                         readonly
                         class="w-full bg-gray-700 border border-gray-600
-                            rounded-lg px-4 py-2 text-gray-300 cursor-not-allowed"
+                            rounded-lg px-4 py-2 text-gray-300 cursor-not-allowed">
                 </div>
 
                 {{-- STATUS (HANYA SAAT EDIT) --}}

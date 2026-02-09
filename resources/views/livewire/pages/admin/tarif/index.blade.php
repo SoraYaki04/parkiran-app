@@ -101,8 +101,14 @@ class extends Component {
             'tarif' => $this->tarif,
         ];
 
+        $tarif = TarifParkir::withTrashed()
+            ->where('tipe_kendaraan_id', $this->tipe_kendaraan_id)
+            ->where('durasi_min', $this->durasi_min)
+            ->where('durasi_max', $this->durasi_max)
+            ->first();
+
         if ($this->isEdit) {
-            // UPDATE
+            // ===== UPDATE =====
             $tarif = TarifParkir::findOrFail($this->tarifId);
             $tarif->update($data);
 
@@ -111,22 +117,45 @@ class extends Component {
                 'Update tarif parkir',
                 "Tarif ID: {$tarif->id}, Tipe Kendaraan ID: {$tarif->tipe_kendaraan_id}"
             );
-            $this->dispatch('notify', message: 'Tarf berhasil diperbarui!', type: 'success');
-        } else {
-            // CREATE
-            $tarif = TarifParkir::create($data);
 
-            $this->logActivity(
-                'CREATE_TARIF',
-                'Menambahkan tarif parkir',
-                "Tarif ID: {$tarif->id}, Tipe Kendaraan ID: {$tarif->tipe_kendaraan_id}"
-            );
-            $this->dispatch('notify', message: 'Tarf berhasil ditambahkan!', type: 'success');
+            $message = 'Tarif berhasil diperbarui!';
+        } else {
+            if ($tarif) {
+                // ===== RESTORE + UPDATE =====
+                if ($tarif->trashed()) {
+                    $tarif->restore();
+                    $tarif->touch(); // pastikan updated_at
+                }
+
+                $tarif->update(['tarif' => $this->tarif]);
+
+                $this->logActivity(
+                    'RESTORE_TARIF',
+                    'Restore tarif parkir',
+                    "Tarif ID: {$tarif->id}, Tipe Kendaraan ID: {$tarif->tipe_kendaraan_id}"
+                );
+
+                $message = 'Tarif lama dipulihkan & diperbarui!';
+            } else {
+                // ===== CREATE BARU =====
+                $tarif = TarifParkir::create($data);
+
+                $this->logActivity(
+                    'CREATE_TARIF',
+                    'Menambahkan tarif parkir',
+                    "Tarif ID: {$tarif->id}, Tipe Kendaraan ID: {$tarif->tipe_kendaraan_id}"
+                );
+
+                $message = 'Tarif berhasil ditambahkan!';
+            }
         }
+
+        $this->dispatch('notify', message: $message, type: 'success');
 
         $this->resetForm();
         $this->dispatch('close-modal');
     }
+
 
     /* ========= DELETE ========= */
     public function delete($id)
@@ -215,7 +244,7 @@ class extends Component {
                                 <button wire:click="edit({{ $item->id }})" class="text-primary p-2">
                                     <span class="material-symbols-outlined">edit</span>
                                 </button>
-                                <button wire:click="delete({{ $item->id }})" onclick="return confirm('Hapus tarif ini?')" class="text-red-400 p-2">
+                                <button wire:click="delete({{ $item->id }})" wire:confirm="Hapus tarif ini?" class="text-red-400 p-2">
                                     <span class="material-symbols-outlined">delete</span>
                                 </button>
                             </td>

@@ -71,6 +71,17 @@ class extends Component {
     {
         $tipe = TipeKendaraan::findOrFail($id);
 
+        if (
+            $tipe->areaKapasitas()->exists() ||
+            $tipe->tarifParkir()->exists()
+        ) {
+            $this->dispatch('notify',
+                message: 'Tipe kendaraan tidak dapat diedit karena sudah digunakan!',
+                type: 'error'
+            );
+            return;
+        }
+
         $this->tipeId    = $tipe->id;
         $this->kode_tipe = $tipe->kode_tipe;
         $this->nama_tipe = $tipe->nama_tipe;
@@ -79,47 +90,75 @@ class extends Component {
         $this->dispatch('open-modal');
     }
 
+
     /* ========= SAVE ========= */
     public function save()
     {
         $this->validate([
-            'kode_tipe' => 'required|max:5|unique:tipe_kendaraan,kode_tipe,' . $this->tipeId,
+            'kode_tipe' => 'required|max:5',
             'nama_tipe' => 'required',
         ]);
 
-        $tipe = TipeKendaraan::updateOrCreate(
-            ['id' => $this->tipeId],
-            [
-                'kode_tipe' => strtoupper($this->kode_tipe),
-                'nama_tipe' => $this->nama_tipe,
-            ]
-        );
+        $kode = strtoupper($this->kode_tipe);
 
+
+        $tipe = TipeKendaraan::withTrashed()
+            ->where('kode_tipe', $kode)
+            ->first();
+
+        if ($tipe) {
+
+            if ($tipe->trashed()) {
+                $tipe->restore(); 
+                $tipe->touch(); // memaksa update_at berubah walapun tidak ada perubahan data
+            }
+
+            $tipe->update([
+                'nama_tipe' => $this->nama_tipe,
+            ]);
+
+            $isRestore = $tipe->wasChanged() && $tipe->wasRecentlyCreated === false;
+        } else {
+            // 🔥 JIKA BENAR-BENAR BARU
+            $tipe = TipeKendaraan::create([
+                'kode_tipe' => $kode,
+                'nama_tipe' => $this->nama_tipe,
+            ]);
+
+            $isRestore = false;
+        }
+
+        // ================= LOG =================
         if ($this->isEdit) {
-            // LOG UPDATE
             $this->logActivity(
                 'UPDATE_TIPE_KENDARAAN',
                 'Update tipe kendaraan',
                 "ID {$tipe->id} ({$tipe->kode_tipe} - {$tipe->nama_tipe})"
             );
 
-            $this->dispatch('notify',
-                message: 'Tipe kendaraan berhasil diperbarui!',
-                type: 'success'
+            $message = 'Tipe kendaraan berhasil diperbarui!';
+        } elseif ($isRestore) {
+            $this->logActivity(
+                'RESTORE_TIPE_KENDARAAN',
+                'Restore tipe kendaraan',
+                "ID {$tipe->id} ({$tipe->kode_tipe} - {$tipe->nama_tipe})"
             );
+
+            $message = 'Tipe kendaraan berhasil dipulihkan!';
         } else {
-            // LOG CREATE
             $this->logActivity(
                 'CREATE_TIPE_KENDARAAN',
                 'Menambahkan tipe kendaraan baru',
                 "ID {$tipe->id} ({$tipe->kode_tipe} - {$tipe->nama_tipe})"
             );
 
-            $this->dispatch('notify',
-                message: 'Tipe kendaraan berhasil ditambahkan!',
-                type: 'success'
-            );
+            $message = 'Tipe kendaraan berhasil ditambahkan!';
         }
+
+        $this->dispatch('notify',
+            message: $message,
+            type: 'success'
+        );
 
         $this->resetForm();
         $this->dispatch('close-modal');
@@ -212,7 +251,9 @@ class extends Component {
                 <tbody class="divide-y divide-[#3E4C59]">
                     @forelse($this->tipeKendaraan as $tipe)
                     @php
-                        $isUsed = $tipe->areaKapasitas()->exists(); 
+                        $isUsed = 
+                            $tipe->areaKapasitas()->exists() ||
+                            $tipe->tarifParkir()->exists()
                     @endphp
                     <tr class="hover:bg-surface-hover">
                         <td class="px-6 py-4 text-white font-bold">
@@ -222,12 +263,25 @@ class extends Component {
                             {{ $tipe->nama_tipe }}
                         </td>
                         <td class="px-6 py-4 text-center">
-                            <button wire:click="edit({{ $tipe->id }})" class="text-primary p-2">
+                            <button
+                                @if(!$isUsed)
+                                    wire:click="edit({{ $tipe->id }})"
+                                @endif
+                                @if($isUsed) disabled @endif
+                                class="
+                                    p-2
+                                    {{ $isUsed
+                                        ? 'text-gray-500 cursor-not-allowed'
+                                        : 'text-primary hover:text-primary/80'
+                                    }}
+                                "
+                                title="{{ $isUsed ? 'Tipe kendaraan sudah digunakan' : 'Edit' }}"
+                            >
                                 <span class="material-symbols-outlined">edit</span>
                             </button>
                             <button
                                 wire:click="delete({{ $tipe->id }})"
-                                onclick="return confirm('Hapus tipe kendaraan ini?')"
+                                wire:confirm="Hapus tipe kendaraan ini?"
                                 @if($isUsed) disabled @endif
                                 class="
                                     p-2

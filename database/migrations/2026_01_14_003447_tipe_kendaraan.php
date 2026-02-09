@@ -12,6 +12,9 @@ return new class extends Migration
             $table->id();
             $table->string('kode_tipe'); // M, L, B
             $table->string('nama_tipe'); // Motor, Mobil, Bus
+
+            $table->softDeletes();
+            $table->timestamps();
         });
     }
 

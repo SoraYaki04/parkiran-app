@@ -16,7 +16,8 @@ class Kendaraan extends Model
         'tipe_kendaraan_id',
         'nama_pemilik',
         'status',
-        'slot_parkir_id'
+        'slot_parkir_id',
+        'member_id'
     ];
 
     // Kendaraan punya 1 tipe
@@ -37,9 +38,9 @@ class Kendaraan extends Model
         return $this->hasMany(TransaksiParkir::class);
     }
 
-    // Kendaraan bisa punya 1 member
+    // Kendaraan milik 1 member (opsional)
     public function member()
     {
-        return $this->hasOne(Member::class);
+        return $this->belongsTo(Member::class);
     }
 }

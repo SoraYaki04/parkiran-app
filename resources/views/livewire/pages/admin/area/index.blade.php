@@ -154,33 +154,14 @@ class extends Component {
     public function save()
     {
         $this->validate([
-            'kode_area'    => 'required|unique:area_parkir,kode_area,' . $this->areaId,
+            'kode_area'    => 'required',
             'nama_area'    => 'required',
             'lokasi_fisik' => 'required',
             'status'       => 'required|in:aktif,maintenance',
         ]);
 
-        // CEK APAKAH SUDAH ADA SLOT TERISI
-        $terisi = false;
-
-        if ($this->isEdit) {
-            $terisi = SlotParkir::where('area_id', $this->areaId)
-                ->where('status', 'terisi')
-                ->exists();
-        }
-
-        /* =====================================================
-            BERSIHKAN DATA KAPASITAS YANG TIDAK DICENTANG
-        ===================================================== */
-        $this->kapasitas = array_intersect_key(
-            $this->kapasitas,
-            array_flip($this->selectedTipe)
-        );
-
-        /* =====================================================
-            VALIDASI KAPASITAS (HANYA JIKA BELUM ADA SLOT TERISI)
-        ===================================================== */
-        if (! $terisi) {
+        // VALIDASI TIPE & KAPASITAS
+        if (! $this->hasTerisi) {
 
             if (empty($this->selectedTipe)) {
                 $this->dispatch('notify',
@@ -192,96 +173,119 @@ class extends Component {
 
             foreach ($this->selectedTipe as $tipeId) {
                 if (
-                    ! isset($this->kapasitas[$tipeId]) ||
+                    !isset($this->kapasitas[$tipeId]) ||
                     $this->kapasitas[$tipeId] <= 0
                 ) {
-                    $this->addError("kapasitas.$tipeId", 'Jumlah slot wajib diisi');
+                    $this->dispatch('notify',
+                        message: 'Kapasitas tiap tipe wajib diisi',
+                        type: 'error'
+                    );
                     return;
                 }
             }
         }
 
-        /* =====================================================
-            HITUNG KAPASITAS TOTAL DARI TIPE YANG EDI CENTANG
-        ===================================================== */
-        $totalKapasitas = 0;
+        DB::transaction(function () {
 
-        foreach ($this->selectedTipe as $tipeId) {
-            $totalKapasitas += (int) $this->kapasitas[$tipeId];
-        }
+            // ===============================
+            // CEK DATA TERMASUK SOFT DELETE
+            // ===============================
+            $area = AreaParkir::withTrashed()
+                ->where('kode_area', $this->kode_area)
+                ->first();
 
-        DB::transaction(function () use ($terisi, $totalKapasitas) {
+            $logAction = '';
+            $logDesc   = '';
 
-            /* ===============================
-                SIMPAN / UPDATE AREA PARKIR
-            =============================== */
-            $area = AreaParkir::updateOrCreate(
-                ['id' => $this->areaId],
-                [
-                    'kode_area'       => $this->kode_area,
-                    'nama_area'       => $this->nama_area,
-                    'lokasi_fisik'    => $this->lokasi_fisik,
-                    'status'          => $this->status,
-                    'kapasitas_total' => $terisi
-                        ? $this->kapasitas_total
-                        : $totalKapasitas,
-                ]
-            );
+            if ($area && $area->trashed()) {
+                // ===============================
+                // RESTORE DATA
+                // ===============================
+                $area->restore();
 
-            /* =====================================================
-                JIKA SUDAH ADA SLOT TERISI → STOP DI SINI
-            ===================================================== */
-            if ($terisi) {
-
-                $this->logActivity(
-                    'UPDATE_AREA',
-                    'Update area parkir (tanpa ubah slot & kapasitas)',
-                    "Area ID {$area->id} ({$area->nama_area})"
-                );
-
-                return;
-            }
-
-            /* ===============================
-                RESET SLOT & KAPASITAS
-            =============================== */
-            SlotParkir::where('area_id', $area->id)->delete();
-            AreaKapasitas::where('area_id', $area->id)->delete();
-
-            /* ===============================
-                GENERATE SLOT BARU
-            =============================== */
-            foreach ($this->selectedTipe as $tipeId) {
-
-                $jumlah = $this->kapasitas[$tipeId];
-                $tipe   = TipeKendaraan::findOrFail($tipeId);
-
-                AreaKapasitas::create([
-                    'area_id'           => $area->id,
-                    'tipe_kendaraan_id' => $tipeId,
-                    'kapasitas'         => $jumlah,
+                $area->update([
+                    'nama_area'    => $this->nama_area,
+                    'lokasi_fisik' => $this->lokasi_fisik,
+                    'status'       => $this->status,
                 ]);
 
-                for ($i = 1; $i <= $jumlah; $i++) {
-                    SlotParkir::create([
-                        'area_id'           => $area->id,
-                        'kode_slot'         => $tipe->kode_tipe . $i,
-                        'baris'             => $tipe->kode_tipe,
-                        'kolom'             => $i,
-                        'tipe_kendaraan_id' => $tipeId,
-                        'status'            => 'kosong',
-                    ]);
-                }
+                $logAction = 'RESTORE_AREA';
+                $logDesc   = 'Pulihkan (restore) area parkir';
+
+            } elseif ($area) {
+                // ===============================
+                // UPDATE DATA AKTIF
+                // ===============================
+                $area->update([
+                    'nama_area'    => $this->nama_area,
+                    'lokasi_fisik' => $this->lokasi_fisik,
+                    'status'       => $this->status,
+                ]);
+
+                $logAction = 'UPDATE_AREA';
+                $logDesc   = 'Update data area parkir';
+
+            } else {
+                // ===============================
+                // CREATE BARU
+                // ===============================
+                $area = AreaParkir::create([
+                    'kode_area'    => $this->kode_area,
+                    'nama_area'    => $this->nama_area,
+                    'lokasi_fisik' => $this->lokasi_fisik,
+                    'status'       => $this->status,
+                ]);
+
+                $logAction = 'CREATE_AREA';
+                $logDesc   = 'Tambah area parkir baru';
             }
 
-            /* ===============================
-                ACTIVITY LOG
-            =============================== */
+            // ===============================
+            // SLOT & KAPASITAS
+            // ===============================
+            if (! $this->hasTerisi) {
+
+                AreaKapasitas::where('area_id', $area->id)->delete();
+                SlotParkir::where('area_id', $area->id)->delete();
+
+                $totalSlot = 0;
+
+                foreach ($this->selectedTipe as $tipeId) {
+
+                    $jumlah = (int) $this->kapasitas[$tipeId];
+                    $tipe   = TipeKendaraan::findOrFail($tipeId);
+
+                    AreaKapasitas::create([
+                        'area_id'           => $area->id,
+                        'tipe_kendaraan_id' => $tipeId,
+                        'kapasitas'         => $jumlah,
+                    ]);
+
+                    for ($i = 1; $i <= $jumlah; $i++) {
+                        SlotParkir::create([
+                            'area_id'           => $area->id,
+                            'kode_slot'         => $tipe->kode_tipe . $i,
+                            'baris'             => $tipe->kode_tipe,
+                            'kolom'             => $i,
+                            'tipe_kendaraan_id' => $tipeId,
+                            'status'            => 'kosong',
+                        ]);
+                    }
+
+                    $totalSlot += $jumlah;
+                }
+
+                $area->update([
+                    'kapasitas_total' => $totalSlot
+                ]);
+            }
+
+            // ===============================
+            // ACTIVITY LOG
+            // ===============================
             $this->logActivity(
-                $this->isEdit ? 'UPDATE_AREA' : 'CREATE_AREA',
-                $this->isEdit
-                    ? 'Update area parkir beserta slot'
-                    : 'Tambah area parkir baru',
+                $logAction,
+                $logDesc,
                 "Area ID {$area->id} ({$area->nama_area})"
             );
         });
@@ -296,11 +300,15 @@ class extends Component {
     }
 
 
+
+
+
     /* ===============================
         DELETE
     =============================== */
     public function delete($id)
     {
+
         $terisi = SlotParkir::where('area_id', $id)
             ->where('status', 'terisi')
             ->exists();
@@ -313,23 +321,21 @@ class extends Component {
             return;
         }
 
-        DB::transaction(function () use ($id) {
-            SlotParkir::where('area_id', $id)->delete();
-            AreaKapasitas::where('area_id', $id)->delete();
-            AreaParkir::findOrFail($id)->delete();
+        $area = AreaParkir::findOrFail($id);
+        $area->delete(); // ← SOFT DELETE
 
-            $this->logActivity(
-                'DELETE_AREA',
-                'Hapus area parkir',
-                "Area ID {$id}"
-            );
-        });
+        $this->logActivity(
+            'DELETE_AREA',
+            'Soft delete area parkir',
+            "Area ID {$area->id} ({$area->nama_area})"
+        );
 
         $this->dispatch('notify',
             message: 'Area parkir berhasil dihapus',
             type: 'success'
         );
     }
+
 
 
     /* ===============================
@@ -429,7 +435,7 @@ class extends Component {
 
                                 <button
                                     wire:click="delete({{ $area->id }})"
-                                    onclick="return confirm('Hapus area ini?')"
+                                    wire:confirm="Hapus area ini?"
                                     @if($isUsed) disabled @endif
                                     class="p-2 {{ $isUsed ? 'text-gray-500 cursor-not-allowed' : 'text-red-400 hover:text-red-500' }}"
                                     title="{{ $isUsed ? 'Area masih digunakan, tidak bisa dihapus' : 'Hapus' }}">
@@ -531,7 +537,7 @@ class extends Component {
                     <label class="flex items-center gap-2 text-gray-300">
                     <input
                         type="checkbox"
-                        wire:model="selectedTipe"
+                        wire:model.live="selectedTipe"
                         value="{{ $tipe->id }}"
                         @if($hasTerisi) disabled @endif
                         class="rounded border-gray-600 bg-gray-800

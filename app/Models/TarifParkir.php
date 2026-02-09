@@ -3,9 +3,12 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class TarifParkir extends Model
 {
+    use SoftDeletes;
+
     protected $table = 'tarif_parkir';
 
     protected $fillable = [

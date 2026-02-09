@@ -18,6 +18,7 @@ return new class extends Migration
             $table->integer('durasi_max'); // menit
             $table->integer('tarif');
 
+            $table->softDeletes();
             $table->timestamps();
         });
 

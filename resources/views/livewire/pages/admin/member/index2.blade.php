@@ -6,6 +6,7 @@ use Livewire\Volt\Component;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\WithPagination;
+use Illuminate\Support\Facades\DB;
 
 new #[Layout('layouts.app')]
 #[Title('Tier Member')]
@@ -13,12 +14,10 @@ class extends Component {
     use WithPagination;
 
     public $tierId;
-
     public $nama;
     public $harga;
     public $periode;
     public $diskon_persen;
-    public $masa_berlaku_hari;
     public $status = 'aktif';
 
     public $search = '';
@@ -57,7 +56,7 @@ class extends Component {
                 $q->where('nama', 'like', "%{$this->search}%")
             )
             ->orderBy('harga')
-            ->paginate(10); 
+            ->paginate(10);
     }
 
     /* ===============================
@@ -74,51 +73,103 @@ class extends Component {
     {
         $tier = TierMember::findOrFail($id);
 
-        $this->tierId             = $tier->id;
-        $this->nama               = $tier->nama;
-        $this->harga              = $tier->harga;
-        $this->periode            = $tier->periode;
-        $this->diskon_persen      = $tier->diskon_persen;
-        $this->masa_berlaku_hari  = $tier->masa_berlaku_hari;
-        $this->status             = $tier->status;
+        $this->tierId            = $tier->id;
+        $this->nama              = $tier->nama;
+        $this->harga             = $tier->harga;
+        $this->periode           = $tier->periode;
+        $this->diskon_persen     = $tier->diskon_persen;
+        $this->status            = $tier->status;
 
         $this->isEdit = true;
         $this->dispatch('open-modal');
     }
 
+    /* ===============================
+        SAVE (CREATE / UPDATE / RESTORE)
+    =============================== */
     public function save()
     {
         $this->validate([
-            'nama'              => 'required|unique:tier_member,nama,' . $this->tierId,
-            'harga'             => 'required|integer|min:0',
-            'periode'           => 'required|in:bulanan,tahunan',
-            'diskon_persen'     => 'required|integer|min:0|max:100',
-            'status'            => 'required|in:aktif,nonaktif',
+            'nama'          => 'required|string|max:255',
+            'harga'         => 'required|integer|min:0',
+            'periode'       => 'required|in:bulanan,tahunan',
+            'diskon_persen' => 'required|integer|min:0|max:100',
+            'status'        => 'required|in:aktif,nonaktif',
         ]);
 
-        $tier = TierMember::updateOrCreate(
-            ['id' => $this->tierId],
-            [
+        DB::transaction(function () {
+
+            // 🔥 Cari termasuk yang soft delete
+            $tier = TierMember::withTrashed()
+                ->where('nama', $this->nama)
+                ->first();
+
+            /* ===============================
+                RESTORE
+            =============================== */
+            if ($tier && $tier->trashed()) {
+
+                $tier->restore();
+                $tier->update([
+                    'harga'             => $this->harga,
+                    'periode'           => $this->periode,
+                    'diskon_persen'     => $this->diskon_persen,
+                    'status'            => $this->status,
+                ]);
+
+                $this->logActivity(
+                    'RESTORE_TIER_MEMBER',
+                    'Memulihkan tier member yang sebelumnya dihapus',
+                    "ID {$tier->id} ({$tier->nama})"
+                );
+
+                $this->dispatch('notify',
+                    message: 'Tier member dipulihkan dari data lama',
+                    type: 'success'
+                );
+
+                return;
+            }
+
+            /* ===============================
+                UPDATE
+            =============================== */
+            if ($this->isEdit) {
+
+                $tier = TierMember::findOrFail($this->tierId);
+                $tier->update([
+                    'nama'              => $this->nama,
+                    'harga'             => $this->harga,
+                    'periode'           => $this->periode,
+                    'diskon_persen'     => $this->diskon_persen,
+                    'status'            => $this->status,
+                ]);
+
+                $this->logActivity(
+                    'UPDATE_TIER_MEMBER',
+                    'Memperbarui tier member',
+                    "ID {$tier->id} ({$tier->nama})"
+                );
+
+                $this->dispatch('notify',
+                    message: 'Tier member berhasil diperbarui!',
+                    type: 'success'
+                );
+
+                return;
+            }
+
+            /* ===============================
+                CREATE BARU
+            =============================== */
+            $tier = TierMember::create([
                 'nama'              => $this->nama,
                 'harga'             => $this->harga,
                 'periode'           => $this->periode,
                 'diskon_persen'     => $this->diskon_persen,
                 'status'            => $this->status,
-            ]
-        );
+            ]);
 
-        if ($this->isEdit) {
-            $this->logActivity(
-                'UPDATE_TIER_MEMBER',
-                'Memperbarui tier member',
-                "ID {$tier->id} ({$tier->nama})"
-            );
-
-            $this->dispatch('notify',
-                message: 'Tier member berhasil diperbarui!',
-                type: 'success'
-            );
-        } else {
             $this->logActivity(
                 'CREATE_TIER_MEMBER',
                 'Menambahkan tier member baru',
@@ -129,32 +180,54 @@ class extends Component {
                 message: 'Tier member berhasil ditambahkan!',
                 type: 'success'
             );
-        }
+        });
 
         $this->resetForm();
         $this->dispatch('close-modal');
     }
 
+    /* ===============================
+        DELETE (SOFT)
+    =============================== */
     public function delete($id)
     {
+
+
         $tier = TierMember::findOrFail($id);
 
         if ($tier->members()->exists()) {
             $this->dispatch('notify',
-                message: 'Tier member tidak bisa dihapus karena masih digunakan oleh member!',
+                message: 'Tier member tidak bisa dihapus karena masih digunakan!',
                 type: 'error'
             );
             return;
         }
 
-        // LOG SEBELUM DELETE
-        $this->logActivity(
-            'DELETE_TIER_MEMBER',
-            'Menghapus tier member',
-            "ID {$tier->id} ({$tier->nama})"
-        );
+        DB::transaction(function () use ($tier) {
+
+
+            $tier->update([
+                'status' => 'nonaktif',
+            ]);
+
+
+            $tier->delete();
+
+
+            $this->logActivity(
+                'DELETE_TIER_MEMBER',
+                'Soft delete tier member (status mati)',
+                "ID {$tier->id} ({$tier->nama})"
+            );
+        });
 
         $tier->delete();
+
+        $this->logActivity(
+            'DELETE_TIER_MEMBER',
+            'Soft delete tier member',
+            "ID {$tier->id} ({$tier->nama})"
+        );
 
         $this->dispatch('notify',
             message: 'Tier member berhasil dihapus!',
@@ -170,8 +243,8 @@ class extends Component {
             'harga',
             'periode',
             'diskon_persen',
-            'masa_berlaku_hari',
             'status',
+            'isEdit',
         ]);
     }
 };
@@ -262,7 +335,7 @@ class extends Component {
 
                                 <button
                                     wire:click="delete({{ $tier->id }})"
-                                    onclick="return confirm('Hapus tier ini?')"
+                                    wire:confirm="Hapus tier ini?"
                                     @if($isUsed) disabled @endif
                                     class="
                                         p-2
@@ -347,6 +420,7 @@ class extends Component {
                     </button>
 
                     <button
+                    
                         wire:loading.attr="disabled"
                         class="bg-primary px-4 py-2 rounded-lg font-bold text-black disabled:opacity-60">
                         Simpan
