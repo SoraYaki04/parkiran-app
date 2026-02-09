@@ -97,8 +97,8 @@ new class extends Component
 
         @endif
 
-        {{-- ================= ADMIN ONLY ================= --}}
-        @if(auth()->user()->role_id == 1)
+        {{-- ================= DATA MASTER (ADMIN & PETUGAS) ================= --}}
+        @if(in_array(auth()->user()->role_id, [1,2]))
 
             <div class="pt-4 mt-4 border-t border-gray-800">
             <p class="px-4 text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Data Master</p>
@@ -133,7 +133,6 @@ new class extends Component
 
             <div class="pt-4 mt-4 border-t border-gray-800">
 
-
                 <a href="{{ route('admin.tier_member') }}" wire:navigate.preserve-scroll
                    class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all
                    {{ request()->routeIs('admin.tier_member')
@@ -151,6 +150,11 @@ new class extends Component
                     <span class="material-symbols-outlined">group</span>
                     Member
                 </a>
+
+        @endif
+
+        {{-- ================= ADMIN ONLY ================= --}}
+        @if(auth()->user()->role_id == 1)
 
                 <a href="{{ route('admin.users') }}" wire:navigate.preserve-scroll
                    class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all
@@ -212,8 +216,31 @@ new class extends Component
 
     </nav>
 
+    {{-- USER PROFILE --}}
+    <div class="px-4 pt-4 pb-2 border-t border-gray-800">
+        <div class="flex items-center gap-3 px-2">
+            {{-- Avatar Initials --}}
+            <div class="size-10 rounded-full bg-gradient-to-br from-primary to-yellow-600
+                        flex items-center justify-center text-sm font-black text-black shrink-0">
+                {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}{{ strtoupper(substr(auth()->user()->name, strpos(auth()->user()->name, ' ') + 1, 1)) }}
+            </div>
+            <div class="flex flex-col min-w-0">
+                <span class="text-white text-sm font-bold truncate">{{ auth()->user()->name }}</span>
+                @php
+                    $roleLabel = match(auth()->user()->role_id) {
+                        1 => 'Admin',
+                        2 => 'Petugas',
+                        3 => 'Owner',
+                        default => 'User',
+                    };
+                @endphp
+                <span class="text-xs text-primary font-medium">{{ $roleLabel }}</span>
+            </div>
+        </div>
+    </div>
+
     {{-- LOGOUT --}}
-    <div class="p-4 border-t border-gray-800">
+    <div class="px-4 pb-4 pt-2">
         <div x-data="{ loading: false }">
             <button
                 @click="

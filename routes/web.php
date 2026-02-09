@@ -84,10 +84,8 @@ Route::middleware('auth')->group(function () {
             ->name('export.analytics.csv');
     });
 
-    // ================= ADMIN ONLY =================
-    Route::middleware('admin')->prefix('admin')->name('admin.')->group(function () {
-
-
+    // ================= DATA MASTER (ADMIN & PETUGAS) =================
+    Route::middleware('role:admin,petugas')->prefix('admin')->name('admin.')->group(function () {
         Volt::route('kendaraan', 'pages.admin.kendaraan.index')
             ->name('kendaraan');
 
@@ -102,7 +100,10 @@ Route::middleware('auth')->group(function () {
 
         Volt::route('tier_member', 'pages.admin.member.index2')
             ->name('tier_member');
+    });
 
+    // ================= ADMIN ONLY (SYSTEM) =================
+    Route::middleware('admin')->prefix('admin')->name('admin.')->group(function () {
         Volt::route('users', 'pages.admin.users.index')
             ->name('users');
 

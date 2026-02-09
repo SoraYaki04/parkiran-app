@@ -311,14 +311,12 @@ class extends Component {
                     <input wire:model="username" class="w-full bg-[#161e25] border border-[#3E4C59] rounded-lg px-4 py-2 text-white" placeholder="Username">
                 </div>
 
-                @if(!$isEdit)
-                    <div>
-                        <label class="text-sm text-gray-400">Password</label>
-                        <input wire:model="password" type="password"
-                            class="w-full bg-[#161e25] border border-[#3E4C59] rounded-lg px-4 py-2 text-white"
-                            placeholder="Password">
-                    </div>
-                @endif
+                <div>
+                    <label class="text-sm text-gray-400">Password {{ $isEdit ? '(Isi jika ingin mengganti)' : '' }}</label>
+                    <input wire:model="password" type="password"
+                        class="w-full bg-[#161e25] border border-[#3E4C59] rounded-lg px-4 py-2 text-white"
+                        placeholder="Password">
+                </div>
 
                 <div>
                     <label class="text-sm text-gray-400">Status</label>

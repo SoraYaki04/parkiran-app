@@ -374,11 +374,13 @@ class extends Component {
             <p class="text-slate-400">Atur area parkir</p>
         </div>
 
+        @if(auth()->user()->role_id == 1)
         <button wire:click="create"
             class="flex items-center gap-2 bg-primary text-black px-5 py-2.5 rounded-lg font-bold">
             <span class="material-symbols-outlined">add</span>
             Tambah Area
         </button>
+        @endif
     </header>
 
     <!-- SEARCH -->
@@ -402,7 +404,9 @@ class extends Component {
                         <th class="px-6 py-4 text-left text-slate-400 text-xs">Lokasi</th>
                         <th class="px-6 py-4 text-center text-slate-400 text-xs">Kapasitas</th>
                         <th class="px-6 py-4 text-center text-slate-400 text-xs">Status</th>
+                        @if(auth()->user()->role_id == 1)
                         <th class="px-6 py-4 text-center text-slate-400 text-xs">Aksi</th>
+                        @endif
                     </tr>
                 </thead>
 
@@ -429,6 +433,7 @@ class extends Component {
                                     <span class="text-xs font-bold text-gray-400">Tidak Diketahui</span>
                                 @endif
                             </td>
+                            @if(auth()->user()->role_id == 1)
                             <td class="px-6 py-4 text-center">
                                 <button wire:click="edit({{ $area->id }})" class="text-primary p-2">
                                     <span class="material-symbols-outlined">edit</span>
@@ -443,6 +448,7 @@ class extends Component {
                                     <span class="material-symbols-outlined">delete</span>
                                 </button>
                             </td>
+                            @endif
                         </tr>
 
                     @empty
@@ -462,6 +468,7 @@ class extends Component {
         {{ $this->areas->links() }}
     </div>
 
+    @if(auth()->user()->role_id == 1)
     <!-- MODAL -->
     <div x-show="open" x-transition class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
         <div @click.away="open=false"
@@ -578,6 +585,7 @@ class extends Component {
             </form>
         </div>
     </div>
+    @endif
 
 </div>
 

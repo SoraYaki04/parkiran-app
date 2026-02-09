@@ -220,11 +220,13 @@ class extends Component {
             </p>
         </div>
 
+        @if(auth()->user()->role_id == 1)
         <button wire:click="create"
             class="flex items-center gap-2 bg-primary text-black px-5 py-2.5 rounded-lg font-bold">
             <span class="material-symbols-outlined">add</span>
             Tambah Tipe Kendaraan
         </button>
+        @endif
     </header>
 
     {{-- FILTER --}}
@@ -244,7 +246,9 @@ class extends Component {
                     <tr>
                         <th class="px-6 py-4 text-left text-slate-400 text-xs">Kode</th>
                         <th class="px-6 py-4 text-left text-slate-400 text-xs">Tipe Kendaraan</th>
+                        @if(auth()->user()->role_id == 1)
                         <th class="px-6 py-4 text-center text-slate-400 text-xs">Aksi</th>
+                        @endif
                     </tr>
                 </thead>
 
@@ -262,6 +266,7 @@ class extends Component {
                         <td class="px-6 py-4 text-white">
                             {{ $tipe->nama_tipe }}
                         </td>
+                        @if(auth()->user()->role_id == 1)
                         <td class="px-6 py-4 text-center">
                             <button
                                 @if(!$isUsed)
@@ -295,6 +300,7 @@ class extends Component {
                                 <span class="material-symbols-outlined">delete</span>
                             </button>
                         </td>
+                        @endif
                     </tr>
                     @empty
                     <tr>
@@ -311,6 +317,7 @@ class extends Component {
         {{ $this->tipeKendaraan->links() }}
     </div>
 
+    @if(auth()->user()->role_id == 1)
     {{-- MODAL --}}
     <div x-show="open" x-transition class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
         <div class="bg-card-dark w-full max-w-md p-6 rounded-xl">
@@ -347,5 +354,6 @@ class extends Component {
             </form>
         </div>
     </div>
+    @endif
 </div>
 

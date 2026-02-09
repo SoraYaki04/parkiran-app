@@ -483,11 +483,13 @@ class extends Component
                                     <button wire:click="edit({{ $m->id }})" class="text-primary">
                                         <span class="material-symbols-outlined">edit</span>
                                     </button>
+                                    @if(auth()->user()->role_id == 1)
                                     <button wire:click="delete({{ $m->id }})"
                                         wire:confirm="Hapus member ini?"
                                         class="text-red-400">
                                         <span class="material-symbols-outlined">delete</span>
                                     </button>
+                                    @endif
                                 </div>
                             </td>
                         </tr>
@@ -512,7 +514,7 @@ class extends Component
         x-transition
         class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
 
-        <div class="bg-card-dark w-full max-w-lg p-6 rounded-xl max-h-[90vh] overflow-y-auto">
+        <div class="bg-card-dark w-full max-w-lg p-6 rounded-xl max-h-[90vh] overflow-y-auto scrollbar-hide">
 
             {{-- TITLE --}}
             <h3 class="text-white font-bold mb-4">
