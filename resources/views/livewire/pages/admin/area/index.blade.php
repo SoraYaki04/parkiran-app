@@ -234,6 +234,7 @@ class extends Component {
                     'nama_area'    => $this->nama_area,
                     'lokasi_fisik' => $this->lokasi_fisik,
                     'status'       => $this->status,
+                    'kapasitas_total' => 0,
                 ]);
 
                 $logAction = 'CREATE_AREA';

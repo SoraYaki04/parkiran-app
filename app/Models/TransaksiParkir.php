@@ -13,6 +13,7 @@ class TransaksiParkir extends Model
 
     protected $fillable = [
         'kode_karcis',
+        'parkir_session_id',
         'kendaraan_id',
         'slot_parkir_id',
         'tipe_kendaraan_id',

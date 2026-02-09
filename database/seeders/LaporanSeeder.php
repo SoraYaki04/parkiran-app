@@ -98,10 +98,9 @@ class LaporanSeeder extends Seeder
         if ($tierGold) {
             $memberKendaraan = $kendaraanList->take(10);
             foreach ($memberKendaraan as $idx => $kendaraan) {
-                Member::firstOrCreate(
-                    ['kendaraan_id' => $kendaraan->id],
+                $member = Member::firstOrCreate(
+                    ['kode_member' => 'MBR' . str_pad($idx + 1, 4, '0', STR_PAD_LEFT)],
                     [
-                        'kode_member' => 'MBR' . str_pad($idx + 1, 4, '0', STR_PAD_LEFT),
                         'nama' => 'Member ' . ($idx + 1),
                         'no_hp' => '08' . rand(1000000000, 9999999999),
                         'tier_member_id' => $tierGold->id,
@@ -110,6 +109,8 @@ class LaporanSeeder extends Seeder
                         'status' => 'aktif',
                     ]
                 );
+                // Assign kendaraan ke member
+                $kendaraan->update(['member_id' => $member->id]);
             }
         }
 
@@ -139,7 +140,7 @@ class LaporanSeeder extends Seeder
                 $slot = $slots->where('tipe_kendaraan_id', $kendaraan->tipe_kendaraan_id)->random();
 
                 // Check if this kendaraan has a member
-                $member = $members->where('kendaraan_id', $kendaraan->id)->first();
+                $member = $kendaraan->member_id ? $members->where('id', $kendaraan->member_id)->first() : null;
 
                 // Calculate tarif based on duration
                 $tarif = $this->calculateTarif($kendaraan->tipe_kendaraan_id, $durasiMenit);
