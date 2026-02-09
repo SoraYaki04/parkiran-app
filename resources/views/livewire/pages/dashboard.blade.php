@@ -113,7 +113,6 @@ class extends Component
     </header>
 
     <div class="flex-1 overflow-y-auto p-8 space-y-10 scrollbar-hide">
-        @if($this->isAdmin)
             
             {{-- TOP STATS --}}
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -217,7 +216,9 @@ class extends Component
                                 <td class="px-8 py-5">
                                     <div class="flex flex-col">
                                         <span class="text-white font-black text-xs uppercase">{{ $session->slot->area->nama_area ?? '-' }}</span>
-                                        <span class="text-[9px] text-primary font-black uppercase tracking-widest italic opacity-70">{{ $session->slot->kode_slot }}</span>
+                                        <span class="text-[9px] text-primary font-black uppercase tracking-widest italic opacity-70">
+                                            {{ $session->slot->kode_slot ?? '-' }}
+                                        </span>
                                     </div>
                                 </td>
                                 <td class="px-8 py-5 text-gray-400 text-xs font-black tracking-widest">{{ $session->created_at->format('H:i:s') }}</td>
@@ -238,16 +239,5 @@ class extends Component
                 </div>
             </div>
 
-        @else
-            {{-- PETUGAS VIEW --}}
-            <div class="flex flex-col items-center justify-center min-h-[500px] border-4 border-dashed border-gray-900 rounded-[3rem] bg-gray-950/40">
-                 <div class="size-32 rounded-3xl bg-gray-900 flex items-center justify-center mb-8 border border-gray-800 shadow-2xl rotate-3 group hover:rotate-0 transition-transform">
-                    <span class="material-symbols-outlined text-primary text-6xl">qr_code_scanner</span>
-                 </div>
-                 <h3 class="text-white text-3xl font-black uppercase tracking-tighter italic">Terminal <span class="text-primary">Officer</span></h3>
-                 <p class="text-gray-500 mt-3 text-xs font-black uppercase tracking-[0.3em]">Silahkan akses terminal melalui menu sidebar</p>
-                 <div class="mt-8 h-1 w-20 bg-gray-800 rounded-full"></div>
-            </div>
-        @endif
     </div>
 </div>

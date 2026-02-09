@@ -17,7 +17,6 @@ class DatabaseSeeder extends Seeder
             TierMemberSeeder::class,
             TipeKendaraanSeeder::class,
             TarifParkirSeeder::class,
-            LaporanSeeder::class,
         ]);
     }
 }

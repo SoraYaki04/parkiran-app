@@ -151,11 +151,22 @@ new #[Layout('layouts.guest')] class extends Component
 
             <!-- Submit Button -->
             <button
-                    wire:loading.attr="disabled"
-                    type="submit"
-                    class="bg-primary px-4 py-2 rounded-lg font-bold text-black disabled:opacity-60">
-                Login
+                wire:submit="login"
+                wire:loading.attr="disabled"
+                wire:target="login"
+                class="bg-primary px-4 py-2 rounded-lg font-bold text-black
+                    flex items-center justify-center gap-2
+                    disabled:opacity-60">
+
+                <span wire:loading.remove wire:target="login">
+                    Login
+                </span>
+
+                <span wire:loading wire:target="login" class="flex items-center gap-2">
+                    Logging in...
+                </span>
             </button>
+
             {{-- <div class="text-center">
                 <p class="text-s text-gray-400 dark:text-gray-600">
                     Belum punya akun?
