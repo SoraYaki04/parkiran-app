@@ -10,6 +10,7 @@ use App\Models\SlotParkir;
 use App\Models\TipeKendaraan;
 use App\Models\TransaksiParkir;
 use App\Models\AreaParkir;
+use App\Models\TarifParkir;
 use Carbon\Carbon;
 
 new #[Layout('layouts.app')]
@@ -79,6 +80,57 @@ class extends Component
     public function getIsAdminProperty()
     {
         return auth()->user()->role_id === 1;
+    }
+
+    public function getTarifInfoProperty()
+    {
+        $tipeKendaraan = TipeKendaraan::with(['tarifParkir' => function($q) {
+            $q->orderBy('durasi_min', 'asc');
+        }])->get();
+
+        $colorMaps = [
+            ['text' => 'text-primary',      'border' => 'hover:border-primary/40',      'icon_bg' => 'group-hover:bg-primary/10',      'icon' => 'text-primary'],
+            ['text' => 'text-blue-400',      'border' => 'hover:border-blue-400/40',      'icon_bg' => 'group-hover:bg-blue-400/10',      'icon' => 'text-blue-400'],
+            ['text' => 'text-emerald-400',   'border' => 'hover:border-emerald-400/40',   'icon_bg' => 'group-hover:bg-emerald-400/10',   'icon' => 'text-emerald-400'],
+            ['text' => 'text-violet-400',    'border' => 'hover:border-violet-400/40',    'icon_bg' => 'group-hover:bg-violet-400/10',    'icon' => 'text-violet-400'],
+            ['text' => 'text-amber-400',     'border' => 'hover:border-amber-400/40',     'icon_bg' => 'group-hover:bg-amber-400/10',     'icon' => 'text-amber-400'],
+            ['text' => 'text-rose-400',      'border' => 'hover:border-rose-400/40',      'icon_bg' => 'group-hover:bg-rose-400/10',      'icon' => 'text-rose-400'],
+        ];
+
+        return $tipeKendaraan->map(function($tipe, $index) use ($colorMaps) {
+            $cm = $colorMaps[$index % count($colorMaps)];
+            return [
+                'nama_tipe'    => $tipe->nama_tipe,
+                'kode_tipe'    => $tipe->kode_tipe,
+                'color_text'   => $cm['text'],
+                'color_border' => $cm['border'],
+                'color_icon_bg'=> $cm['icon_bg'],
+                'color_icon'   => $cm['icon'],
+                'tarifs'       => $tipe->tarifParkir->map(function($t) {
+                    // Format duration label
+                    if ($t->durasi_min == 0 && $t->durasi_max <= 60) {
+                        $label = '0 - ' . $t->durasi_max . ' mnt';
+                    } elseif ($t->durasi_max >= 1440) {
+                        $jam_min = intdiv($t->durasi_min, 60);
+                        $label = $jam_min . ' jam +';
+                    } else {
+                        $jam_min = intdiv($t->durasi_min, 60);
+                        $mnt_min = $t->durasi_min % 60;
+                        $jam_max = intdiv($t->durasi_max, 60);
+                        $mnt_max = $t->durasi_max % 60;
+
+                        $from = $jam_min > 0 ? $jam_min . ' jam' . ($mnt_min > 0 ? ' ' . $mnt_min . 'm' : '') : $t->durasi_min . ' mnt';
+                        $to   = $jam_max > 0 ? $jam_max . ' jam' . ($mnt_max > 0 ? ' ' . $mnt_max . 'm' : '') : $t->durasi_max . ' mnt';
+                        $label = $from . ' - ' . $to;
+                    }
+
+                    return [
+                        'durasi_label' => $label,
+                        'tarif'        => $t->tarif,
+                    ];
+                })->toArray(),
+            ];
+        });
     }
 }
 ?>
@@ -178,6 +230,59 @@ class extends Component
                                 <span>Dipakai: {{ $area['used'] }}</span>
                                 <span>Maksimal: {{ $area['total'] }}</span>
                             </div>
+                        </div>
+                    </div>
+                    @endforeach
+                </div>
+            </section>
+
+            {{-- TARIF INFO SECTION --}}
+            <section>
+                <div class="flex items-center gap-4 mb-8">
+                    <div class="h-8 w-2 bg-primary rounded-full"></div>
+                    <h3 class="text-white font-black text-xl uppercase tracking-tighter italic">Informasi <span class="text-primary">Tarif</span></h3>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
+                    @foreach($this->tarifInfo as $tipe)
+                    <div class="bg-gray-900 border border-gray-800 rounded-2xl md:rounded-[2rem] overflow-hidden {{ $tipe['color_border'] }} transition-all group shadow-xl">
+                        {{-- Card Header --}}
+                        <div class="px-5 md:px-6 py-4 md:py-5 border-b border-gray-800 flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <div class="size-10 rounded-xl bg-gray-800 flex items-center justify-center {{ $tipe['color_icon_bg'] }} transition-all border border-gray-700">
+                                    <span class="material-symbols-outlined {{ $tipe['color_icon'] }} text-xl">transportation</span>
+                                </div>
+                                <div>
+                                    <h4 class="text-white font-black text-sm uppercase tracking-tight">{{ $tipe['nama_tipe'] }}</h4>
+                                    <p class="text-gray-500 text-[9px] font-black uppercase tracking-widest">{{ $tipe['kode_tipe'] }}</p>
+                                </div>
+                            </div>
+                            <span class="text-[9px] font-black uppercase tracking-widest text-gray-600 bg-gray-800 px-2 py-1 rounded-lg border border-gray-700">
+                                {{ count($tipe['tarifs']) }} tier
+                            </span>
+                        </div>
+
+                        {{-- Tariff Tiers --}}
+                        <div class="divide-y divide-gray-800/50">
+                            @forelse($tipe['tarifs'] as $idx => $tarif)
+                            <div class="px-5 md:px-6 py-3 md:py-4 flex items-center justify-between hover:bg-gray-800/30 transition-colors">
+                                <div class="flex items-center gap-3">
+                                    <span class="text-[10px] font-black text-gray-600 bg-gray-800 size-6 rounded-lg flex items-center justify-center border border-gray-700">
+                                        {{ $idx + 1 }}
+                                    </span>
+                                    <div>
+                                        <p class="text-gray-300 text-xs font-bold">{{ $tarif['durasi_label'] }}</p>
+                                    </div>
+                                </div>
+                                <span class="{{ $tipe['color_text'] }} font-black text-sm italic tracking-tight">
+                                    Rp{{ number_format($tarif['tarif'], 0, ',', '.') }}
+                                </span>
+                            </div>
+                            @empty
+                            <div class="px-6 py-5 text-center">
+                                <p class="text-gray-600 text-xs italic">Belum ada tarif</p>
+                            </div>
+                            @endforelse
                         </div>
                     </div>
                     @endforeach
