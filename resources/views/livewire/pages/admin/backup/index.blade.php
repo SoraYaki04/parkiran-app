@@ -33,12 +33,11 @@ class extends Component {
         $service = app(BackupService::class);
         $result = $service->createBackup();
 
-        ActivityLog::create([
-            'user_id' => auth()->id(),
-            'action' => 'CREATE_BACKUP',
-            'category' => 'SYSTEM',
-            'description' => $result['message'],
-        ]);
+        ActivityLog::log(
+            action: 'CREATE_BACKUP',
+            description: $result['message'],
+            category: 'SYSTEM',
+        );
 
         $this->loading = false;
 
@@ -63,12 +62,11 @@ class extends Component {
         $service = app(BackupService::class);
         $result = $service->restoreBackup($this->selectedBackup);
 
-        ActivityLog::create([
-            'user_id' => auth()->id(),
-            'action' => 'RESTORE_BACKUP',
-            'category' => 'SYSTEM',
-            'description' => "Restored from: {$this->selectedBackup} - " . $result['message'],
-        ]);
+        ActivityLog::log(
+            action: 'RESTORE_BACKUP',
+            description: "Restored from: {$this->selectedBackup} - " . $result['message'],
+            category: 'SYSTEM',
+        );
 
         $this->loading = false;
         $this->selectedBackup = '';
@@ -97,12 +95,11 @@ class extends Component {
         $service = app(BackupService::class);
         $result = $service->deleteBackup($filename);
 
-        ActivityLog::create([
-            'user_id' => auth()->id(),
-            'action' => 'DELETE_BACKUP',
-            'category' => 'SYSTEM',
-            'description' => "Deleted backup: {$filename}",
-        ]);
+        ActivityLog::log(
+            action: 'DELETE_BACKUP',
+            description: "Deleted backup: {$filename}",
+            category: 'SYSTEM',
+        );
 
         if ($result['success']) {
             $this->dispatch('notify', message: $result['message'], type: 'success');

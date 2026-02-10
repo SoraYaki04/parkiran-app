@@ -42,13 +42,12 @@ class extends Component {
         string $target = null,
         string $category = 'LAPORAN'
     ) {
-        ActivityLog::create([
-            'user_id'     => auth()->id(),
-            'action'      => $action,
-            'category'    => $category,
-            'target'      => $target,
-            'description' => $description,
-        ]);
+        ActivityLog::log(
+            action: $action,
+            description: $description,
+            target: $target,
+            category: $category,
+        );
     }
 
     public function exportHarianPdf()

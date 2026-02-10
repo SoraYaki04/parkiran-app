@@ -11,13 +11,12 @@ new class extends Component
         $user = auth()->user();
 
         if ($user) {
-            ActivityLog::create([
-                'user_id'     => $user->id,
-                'action'      => 'LOGOUT',
-                'category'    => 'AUTH',
-                'target'      => $user->username,
-                'description' => "User {$user->username} berhasil logout",
-            ]);
+            ActivityLog::log(
+                action: 'LOGOUT',
+                description: "User {$user->username} berhasil logout",
+                target: $user->username,
+                category: 'AUTH',
+            );
         }
 
         Auth::logout();
@@ -76,7 +75,7 @@ new class extends Component
         </a>
 
         {{-- TRANSAKSI (ADMIN & PETUGAS) --}}
-        @if(in_array(auth()->user()->role_id, [1,2]))
+        @if(in_array(auth()->user()->role_id, [2]))
             <a href="{{ route('exit') }}" wire:navigate.preserve-scroll
                class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all
                {{ request()->routeIs('exit')

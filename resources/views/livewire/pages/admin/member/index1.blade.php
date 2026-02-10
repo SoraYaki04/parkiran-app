@@ -38,15 +38,16 @@ class extends Component
         $this->autoExpireMember();
     }
 
-    private function logActivity(string $action, string $description, string $target = null, string $category = 'MASTER')
+    private function logActivity(string $action, string $description, string $target = null, string $category = 'MASTER', ?array $oldValues = null, ?array $newValues = null)
     {
-        ActivityLog::create([
-            'user_id' => auth()->id(),
-            'action' => $action,
-            'category' => $category,
-            'target' => $target,
-            'description' => $description,
-        ]);
+        ActivityLog::log(
+            action: $action,
+            description: $description,
+            target: $target,
+            category: $category,
+            oldValues: $oldValues,
+            newValues: $newValues,
+        );
     }
 
     private function autoExpireMember()
@@ -261,6 +262,16 @@ class extends Component
             ->first();
 
         if ($member) {
+            // Capture old values before update
+            $oldValues = [
+                'nama'             => $member->nama,
+                'no_hp'            => $member->no_hp,
+                'tier_member_id'   => $member->tier_member_id,
+                'tanggal_mulai'    => $member->tanggal_mulai,
+                'tanggal_berakhir' => $member->tanggal_berakhir,
+                'status'           => $member->status,
+            ];
+
             if ($member->trashed()) {
                 $member->restore();
             }
@@ -274,10 +285,31 @@ class extends Component
                 'status'           => $this->isEdit ? $this->status : 'aktif',
             ]);
 
+            $newValues = [
+                'nama'             => $this->nama,
+                'no_hp'            => $this->no_hp,
+                'tier_member_id'   => $this->tier_member_id,
+                'tanggal_mulai'    => $this->tanggal_mulai,
+                'tanggal_berakhir' => $this->tanggal_berakhir,
+                'status'           => $this->isEdit ? $this->status : 'aktif',
+            ];
+
+            // Only keep changed fields
+            foreach ($oldValues as $key => $val) {
+                if ($val == ($newValues[$key] ?? null)) {
+                    unset($oldValues[$key], $newValues[$key]);
+                }
+            }
+            if (empty($oldValues)) $oldValues = null;
+            if (empty($newValues)) $newValues = null;
+
             $this->logActivity(
                 $this->isEdit ? 'UPDATE_MEMBER' : 'RESTORE_MEMBER',
                 $this->isEdit ? 'Update data member' : 'Restore dan update member lama',
-                "ID {$member->id} ({$member->kode_member})"
+                "ID {$member->id} ({$member->kode_member})",
+                'MASTER',
+                $oldValues,
+                $newValues
             );
 
         } else {
@@ -294,7 +326,17 @@ class extends Component
             $this->logActivity(
                 'CREATE_MEMBER',
                 'Menambahkan member baru',
-                "ID {$member->id} ({$member->kode_member})"
+                "ID {$member->id} ({$member->kode_member})",
+                'MASTER',
+                null,
+                [
+                    'nama'             => $this->nama,
+                    'no_hp'            => $this->no_hp,
+                    'tier_member_id'   => $this->tier_member_id,
+                    'tanggal_mulai'    => $this->tanggal_mulai,
+                    'tanggal_berakhir' => $this->tanggal_berakhir,
+                    'status'           => 'aktif',
+                ]
             );
         }
 

@@ -26,15 +26,18 @@ class extends Component {
         string $action,
         string $description,
         string $target = null,
-        string $category = 'MASTER'
+        string $category = 'MASTER',
+        ?array $oldValues = null,
+        ?array $newValues = null,
     ) {
-        ActivityLog::create([
-            'user_id'     => auth()->id(),
-            'action'      => $action,
-            'category'    => $category,
-            'target'      => $target,
-            'description' => $description,
-        ]);
+        ActivityLog::log(
+            action: $action,
+            description: $description,
+            target: $target,
+            category: $category,
+            oldValues: $oldValues,
+            newValues: $newValues,
+        );
     }
 
     /* ======================
@@ -101,6 +104,19 @@ class extends Component {
 
         $kode = strtoupper($this->kode_tipe);
 
+        // Capture old values for edit
+        $oldValues = null;
+        $newValues = null;
+
+        if ($this->isEdit) {
+            $existingTipe = TipeKendaraan::find($this->tipeId);
+            if ($existingTipe) {
+                $oldValues = [
+                    'kode_tipe' => $existingTipe->kode_tipe,
+                    'nama_tipe' => $existingTipe->nama_tipe,
+                ];
+            }
+        }
 
         $tipe = TipeKendaraan::withTrashed()
             ->where('kode_tipe', $kode)
@@ -130,10 +146,29 @@ class extends Component {
 
         // ================= LOG =================
         if ($this->isEdit) {
+            $newValues = [
+                'kode_tipe' => $tipe->kode_tipe,
+                'nama_tipe' => $tipe->nama_tipe,
+            ];
+
+            // Only keep changed fields
+            if ($oldValues) {
+                foreach ($oldValues as $key => $val) {
+                    if ($val == ($newValues[$key] ?? null)) {
+                        unset($oldValues[$key], $newValues[$key]);
+                    }
+                }
+                if (empty($oldValues)) $oldValues = null;
+                if (empty($newValues)) $newValues = null;
+            }
+
             $this->logActivity(
                 'UPDATE_TIPE_KENDARAAN',
                 'Update tipe kendaraan',
-                "ID {$tipe->id} ({$tipe->kode_tipe} - {$tipe->nama_tipe})"
+                "ID {$tipe->id} ({$tipe->kode_tipe} - {$tipe->nama_tipe})",
+                'MASTER',
+                $oldValues,
+                $newValues
             );
 
             $message = 'Tipe kendaraan berhasil diperbarui!';
@@ -149,7 +184,13 @@ class extends Component {
             $this->logActivity(
                 'CREATE_TIPE_KENDARAAN',
                 'Menambahkan tipe kendaraan baru',
-                "ID {$tipe->id} ({$tipe->kode_tipe} - {$tipe->nama_tipe})"
+                "ID {$tipe->id} ({$tipe->kode_tipe} - {$tipe->nama_tipe})",
+                'MASTER',
+                null,
+                [
+                    'kode_tipe' => $kode,
+                    'nama_tipe' => $this->nama_tipe,
+                ]
             );
 
             $message = 'Tipe kendaraan berhasil ditambahkan!';

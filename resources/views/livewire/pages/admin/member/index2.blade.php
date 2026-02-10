@@ -23,22 +23,22 @@ class extends Component {
     public $search = '';
     public $isEdit = false;
 
-    /* ===============================
-        ACTIVITY LOGGER
-    =============================== */
     private function logActivity(
         string $action,
         string $description,
         string $target = null,
-        string $category = 'MASTER'
+        string $category = 'MASTER',
+        ?array $oldValues = null,
+        ?array $newValues = null,
     ) {
-        ActivityLog::create([
-            'user_id'     => auth()->id(),
-            'action'      => $action,
-            'category'    => $category,
-            'target'      => $target,
-            'description' => $description,
-        ]);
+        ActivityLog::log(
+            action: $action,
+            description: $description,
+            target: $target,
+            category: $category,
+            oldValues: $oldValues,
+            newValues: $newValues,
+        );
     }
 
     /* ===============================
@@ -120,7 +120,15 @@ class extends Component {
                 $this->logActivity(
                     'RESTORE_TIER_MEMBER',
                     'Memulihkan tier member yang sebelumnya dihapus',
-                    "ID {$tier->id} ({$tier->nama})"
+                    "ID {$tier->id} ({$tier->nama})",
+                    'MASTER',
+                    null,
+                    [
+                        'harga'         => $this->harga,
+                        'periode'       => $this->periode,
+                        'diskon_persen' => $this->diskon_persen,
+                        'status'        => $this->status,
+                    ]
                 );
 
                 $this->dispatch('notify',
@@ -137,6 +145,16 @@ class extends Component {
             if ($this->isEdit) {
 
                 $tier = TierMember::findOrFail($this->tierId);
+
+                // Capture old values
+                $oldValues = [
+                    'nama'          => $tier->nama,
+                    'harga'         => $tier->harga,
+                    'periode'       => $tier->periode,
+                    'diskon_persen' => $tier->diskon_persen,
+                    'status'        => $tier->status,
+                ];
+
                 $tier->update([
                     'nama'              => $this->nama,
                     'harga'             => $this->harga,
@@ -145,10 +163,31 @@ class extends Component {
                     'status'            => $this->status,
                 ]);
 
+                // Capture new values
+                $newValues = [
+                    'nama'          => $this->nama,
+                    'harga'         => $this->harga,
+                    'periode'       => $this->periode,
+                    'diskon_persen' => $this->diskon_persen,
+                    'status'        => $this->status,
+                ];
+
+                // Only keep changed fields
+                foreach ($oldValues as $key => $val) {
+                    if ($val == ($newValues[$key] ?? null)) {
+                        unset($oldValues[$key], $newValues[$key]);
+                    }
+                }
+                if (empty($oldValues)) $oldValues = null;
+                if (empty($newValues)) $newValues = null;
+
                 $this->logActivity(
                     'UPDATE_TIER_MEMBER',
                     'Memperbarui tier member',
-                    "ID {$tier->id} ({$tier->nama})"
+                    "ID {$tier->id} ({$tier->nama})",
+                    'MASTER',
+                    $oldValues,
+                    $newValues
                 );
 
                 $this->dispatch('notify',
@@ -173,7 +212,16 @@ class extends Component {
             $this->logActivity(
                 'CREATE_TIER_MEMBER',
                 'Menambahkan tier member baru',
-                "ID {$tier->id} ({$tier->nama})"
+                "ID {$tier->id} ({$tier->nama})",
+                'MASTER',
+                null,
+                [
+                    'nama'          => $this->nama,
+                    'harga'         => $this->harga,
+                    'periode'       => $this->periode,
+                    'diskon_persen' => $this->diskon_persen,
+                    'status'        => $this->status,
+                ]
             );
 
             $this->dispatch('notify',

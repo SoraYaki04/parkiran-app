@@ -50,13 +50,12 @@ Route::middleware('auth')->group(function () {
         ->name('password.confirm');
 
     // ================= TRANSAKSI =================
-    // ADMIN & PETUGAS
-    Route::middleware('role:admin,petugas')->group(function () {
-        Volt::route('transaksi', 'pages.exit.index')->name('exit');
-
-        Volt::route('data_parkir', 'pages.data_parkir.index')
-            ->name('data_parkir');
+    // ================= TRANSAKSI (PETUGAS SAJA) =================
+    Route::middleware(['auth', 'role:petugas'])->prefix('petugas')->name('petugas.')->group(function () {
+        Volt::route('exit', 'pages.exit.index')->name('exit'); // route transaksi petugas
+        Volt::route('data_parkir', 'pages.data_parkir.index')->name('data_parkir'); // data parkir petugas
     });
+
 
     // ================= LAPORAN =================
     // ADMIN & OWNER
@@ -86,6 +85,10 @@ Route::middleware('auth')->group(function () {
 
     // ================= DATA MASTER (ADMIN & PETUGAS) =================
     Route::middleware('role:admin,petugas')->prefix('admin')->name('admin.')->group(function () {
+
+        Volt::route('transaksi', 'pages.exit.index')
+            ->name('exit');
+
         Volt::route('kendaraan', 'pages.admin.kendaraan.index')
             ->name('kendaraan');
 

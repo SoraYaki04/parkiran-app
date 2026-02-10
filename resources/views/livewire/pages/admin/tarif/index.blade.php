@@ -29,15 +29,18 @@ class extends Component {
         string $action,
         string $description,
         string $target = null,
-        string $category = 'MASTER'
+        string $category = 'MASTER',
+        ?array $oldValues = null,
+        ?array $newValues = null,
     ) {
-        ActivityLog::create([
-            'user_id'     => auth()->id(),
-            'action'      => $action,
-            'category'    => $category,
-            'target'      => $target,
-            'description' => $description,
-        ]);
+        ActivityLog::log(
+            action: $action,
+            description: $description,
+            target: $target,
+            category: $category,
+            oldValues: $oldValues,
+            newValues: $newValues,
+        );
     }
 
     /* ========= DATA ========= */
@@ -110,12 +113,41 @@ class extends Component {
         if ($this->isEdit) {
             // ===== UPDATE =====
             $tarif = TarifParkir::findOrFail($this->tarifId);
+
+            // Capture old values
+            $oldValues = [
+                'tipe_kendaraan_id' => $tarif->tipe_kendaraan_id,
+                'durasi_min'        => $tarif->durasi_min,
+                'durasi_max'        => $tarif->durasi_max,
+                'tarif'             => $tarif->tarif,
+            ];
+
             $tarif->update($data);
+
+            // Capture new values
+            $newValues = [
+                'tipe_kendaraan_id' => $this->tipe_kendaraan_id,
+                'durasi_min'        => $this->durasi_min,
+                'durasi_max'        => $this->durasi_max,
+                'tarif'             => $this->tarif,
+            ];
+
+            // Only keep changed fields
+            foreach ($oldValues as $key => $val) {
+                if ($val == ($newValues[$key] ?? null)) {
+                    unset($oldValues[$key], $newValues[$key]);
+                }
+            }
+            if (empty($oldValues)) $oldValues = null;
+            if (empty($newValues)) $newValues = null;
 
             $this->logActivity(
                 'UPDATE_TARIF',
                 'Update tarif parkir',
-                "Tarif ID: {$tarif->id}, Tipe Kendaraan ID: {$tarif->tipe_kendaraan_id}"
+                "Tarif ID: {$tarif->id}, Tipe Kendaraan ID: {$tarif->tipe_kendaraan_id}",
+                'MASTER',
+                $oldValues,
+                $newValues
             );
 
             $message = 'Tarif berhasil diperbarui!';
@@ -132,7 +164,10 @@ class extends Component {
                 $this->logActivity(
                     'RESTORE_TARIF',
                     'Restore tarif parkir',
-                    "Tarif ID: {$tarif->id}, Tipe Kendaraan ID: {$tarif->tipe_kendaraan_id}"
+                    "Tarif ID: {$tarif->id}, Tipe Kendaraan ID: {$tarif->tipe_kendaraan_id}",
+                    'MASTER',
+                    null,
+                    ['tarif' => $this->tarif]
                 );
 
                 $message = 'Tarif lama dipulihkan & diperbarui!';
@@ -143,7 +178,10 @@ class extends Component {
                 $this->logActivity(
                     'CREATE_TARIF',
                     'Menambahkan tarif parkir',
-                    "Tarif ID: {$tarif->id}, Tipe Kendaraan ID: {$tarif->tipe_kendaraan_id}"
+                    "Tarif ID: {$tarif->id}, Tipe Kendaraan ID: {$tarif->tipe_kendaraan_id}",
+                    'MASTER',
+                    null,
+                    $data
                 );
 
                 $message = 'Tarif berhasil ditambahkan!';

@@ -39,15 +39,18 @@ class extends Component {
         string $action,
         string $description,
         string $target = null,
-        string $category = 'MASTER'
+        string $category = 'MASTER',
+        ?array $oldValues = null,
+        ?array $newValues = null,
     ) {
-        ActivityLog::create([
-            'user_id'     => auth()->id(),
-            'action'      => $action,
-            'category'    => $category,
-            'target'      => $target,
-            'description' => $description,
-        ]);
+        ActivityLog::log(
+            action: $action,
+            description: $description,
+            target: $target,
+            category: $category,
+            oldValues: $oldValues,
+            newValues: $newValues,
+        );
     }
 
     /* ===============================
@@ -196,6 +199,8 @@ class extends Component {
 
             $logAction = '';
             $logDesc   = '';
+            $oldValues = null;
+            $newValues = null;
 
             if ($area && $area->trashed()) {
                 // ===============================
@@ -216,6 +221,14 @@ class extends Component {
                 // ===============================
                 // UPDATE DATA AKTIF
                 // ===============================
+                // Capture old values before update
+                $oldValues = [
+                    'nama_area'       => $area->nama_area,
+                    'lokasi_fisik'    => $area->lokasi_fisik,
+                    'kapasitas_total' => $area->kapasitas_total,
+                    'status'          => $area->status,
+                ];
+
                 $area->update([
                     'nama_area'    => $this->nama_area,
                     'lokasi_fisik' => $this->lokasi_fisik,
@@ -281,13 +294,43 @@ class extends Component {
                 ]);
             }
 
+            // Build new values for logging (after slot/kapasitas update)
+            if ($logAction === 'UPDATE_AREA' && $oldValues) {
+                $newValues = [
+                    'nama_area'       => $area->nama_area,
+                    'lokasi_fisik'    => $area->lokasi_fisik,
+                    'kapasitas_total' => $area->kapasitas_total,
+                    'status'          => $area->status,
+                ];
+
+                // Only keep changed fields
+                foreach ($oldValues as $key => $val) {
+                    if ($val == ($newValues[$key] ?? null)) {
+                        unset($oldValues[$key], $newValues[$key]);
+                    }
+                }
+                if (empty($oldValues)) $oldValues = null;
+                if (empty($newValues)) $newValues = null;
+            } elseif ($logAction === 'CREATE_AREA') {
+                $newValues = [
+                    'kode_area'       => $area->kode_area,
+                    'nama_area'       => $area->nama_area,
+                    'lokasi_fisik'    => $area->lokasi_fisik,
+                    'kapasitas_total' => $area->kapasitas_total,
+                    'status'          => $area->status,
+                ];
+            }
+
             // ===============================
             // ACTIVITY LOG
             // ===============================
             $this->logActivity(
                 $logAction,
                 $logDesc,
-                "Area ID {$area->id} ({$area->nama_area})"
+                "Area ID {$area->id} ({$area->nama_area})",
+                'MASTER',
+                $oldValues,
+                $newValues
             );
         });
 

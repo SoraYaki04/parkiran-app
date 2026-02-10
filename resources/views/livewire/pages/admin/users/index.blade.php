@@ -50,15 +50,18 @@ class extends Component {
         string $action,
         string $description,
         string $target = null,
-        string $category = 'MASTER'
+        string $category = 'MASTER',
+        ?array $oldValues = null,
+        ?array $newValues = null,
     ) {
-        ActivityLog::create([
-            'user_id'     => auth()->id(),
-            'action'      => $action,
-            'category'    => $category,
-            'target'      => $target,
-            'description' => $description,
-        ]);
+        ActivityLog::log(
+            action: $action,
+            description: $description,
+            target: $target,
+            category: $category,
+            oldValues: $oldValues,
+            newValues: $newValues,
+        );
     }
 
     /* ======================
@@ -162,6 +165,8 @@ class extends Component {
 
             $logAction = '';
             $logDesc   = '';
+            $oldValues = null;
+            $newValues = null;
 
             if ($user && $user->trashed()) {
                 // ===============================
@@ -185,6 +190,13 @@ class extends Component {
                 // ===============================
                 // UPDATE USER AKTIF
                 // ===============================
+                // Capture old values before update
+                $oldValues = [
+                    'name'    => $user->name,
+                    'status'  => $user->status,
+                    'role_id' => $user->role_id,
+                ];
+
                 $updateData = [
                     'name'    => $this->name,
                     'status'  => $this->status,
@@ -201,6 +213,23 @@ class extends Component {
                 }
 
                 $user->update($updateData);
+
+                // Capture new values after update
+                $newValues = [
+                    'name'    => $this->name,
+                    'status'  => $this->status,
+                    'role_id' => $this->role_id,
+                ];
+
+                // Only keep changed fields
+                foreach ($oldValues as $key => $val) {
+                    if ($val == ($newValues[$key] ?? null)) {
+                        unset($oldValues[$key], $newValues[$key]);
+                    }
+                }
+
+                if (empty($oldValues)) $oldValues = null;
+                if (empty($newValues)) $newValues = null;
 
                 $logAction = 'UPDATE_USER';
                 $logDesc   = 'Update data user';
@@ -219,6 +248,13 @@ class extends Component {
                     'password' => bcrypt($this->new_password),
                 ]);
 
+                $newValues = [
+                    'username' => $this->username,
+                    'name'     => $this->name,
+                    'status'   => $this->status,
+                    'role_id'  => $this->role_id,
+                ];
+
                 $logAction = 'CREATE_USER';
                 $logDesc   = 'Menambahkan user baru';
 
@@ -228,13 +264,14 @@ class extends Component {
             // ===============================
             // LOG AKTIVITAS
             // ===============================
-            ActivityLog::create([
-                'user_id'     => auth()->id(),
-                'action'      => $logAction,
-                'category'    => 'MASTER',
-                'target'      => "User ID: {$user->id} ({$user->username})",
-                'description' => $logDesc,
-            ]);
+            ActivityLog::log(
+                action: $logAction,
+                description: $logDesc,
+                target: "User ID: {$user->id} ({$user->username})",
+                category: 'MASTER',
+                oldValues: $oldValues,
+                newValues: $newValues,
+            );
         });
 
         $this->resetForm();

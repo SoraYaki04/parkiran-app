@@ -100,6 +100,9 @@ class extends Component {
                     <option value="AUTH">AUTH</option>
                     <option value="TRANSAKSI">TRANSAKSI</option>
                     <option value="MASTER">MASTER</option>
+                    <option value="NAVIGATION">NAVIGATION</option>
+                    <option value="SYSTEM">SYSTEM</option>
+                    <option value="LAPORAN">LAPORAN</option>
                 </select>
 
                 <select wire:model.live="filterAction"
@@ -138,6 +141,14 @@ class extends Component {
                         <option value="CETAK_STRUK">CETAK_STRUK</option>
                         <option value="EXPORT">EXPORT</option>
                     </optgroup>
+                    <optgroup label="Navigasi" class="bg-surface-dark text-primary font-bold">
+                        <option value="PAGE_VISIT">PAGE_VISIT</option>
+                    </optgroup>
+                    <optgroup label="Sistem" class="bg-surface-dark text-primary font-bold">
+                        <option value="CREATE_BACKUP">CREATE_BACKUP</option>
+                        <option value="RESTORE_BACKUP">RESTORE_BACKUP</option>
+                        <option value="DELETE_BACKUP">DELETE_BACKUP</option>
+                    </optgroup>
                 </select>
 
                 <select wire:model.live="filterUser"
@@ -171,22 +182,31 @@ class extends Component {
                             <th
                                 class="px-6 py-4 text-left text-[10px] font-black uppercase tracking-widest text-slate-500 border-b border-[#3E4C59]">
                                 Deskripsi</th>
+                            <th
+                                class="px-6 py-4 text-left text-[10px] font-black uppercase tracking-widest text-slate-500 border-b border-[#3E4C59]">
+                                IP Address</th>
+                            <th
+                                class="px-6 py-4 text-center text-[10px] font-black uppercase tracking-widest text-slate-500 border-b border-[#3E4C59]">
+                                Detail</th>
                         </tr>
                     </thead>
 
-                    <tbody class="divide-y divide-[#3E4C59]">
-                        @forelse($this->logs as $log)
-                        @php
-                        $role = $this->roleBadge($log->user?->role_id);
-                        $isActive = ($log->user?->status === 'aktif');
-                        $actionColor = match(true) {
-                        str_contains($log->action, 'CREATE') => 'bg-emerald-500 text-emerald-950',
-                        str_contains($log->action, 'DELETE') => 'bg-red-500 text-red-950',
-                        str_contains($log->action, 'UPDATE') => 'bg-amber-400 text-amber-950',
-                        str_contains($log->action, 'LOGIN') => 'bg-blue-400 text-blue-950',
-                        default => 'bg-primary text-black',
-                        };
-                        @endphp
+                    @forelse($this->logs as $log)
+                    @php
+                    $role = $this->roleBadge($log->user?->role_id);
+                    $isActive = ($log->user?->status === 'aktif');
+                    $actionColor = match(true) {
+                    str_contains($log->action, 'CREATE') => 'bg-emerald-500 text-emerald-950',
+                    str_contains($log->action, 'DELETE') => 'bg-red-500 text-red-950',
+                    str_contains($log->action, 'UPDATE') => 'bg-amber-400 text-amber-950',
+                    str_contains($log->action, 'LOGIN') => 'bg-blue-400 text-blue-950',
+                    str_contains($log->action, 'PAGE_VISIT') => 'bg-cyan-400 text-cyan-950',
+                    str_contains($log->action, 'BACKUP') || str_contains($log->action, 'RESTORE') => 'bg-violet-400 text-violet-950',
+                    default => 'bg-primary text-black',
+                    };
+                    $hasChanges = $log->old_values || $log->new_values;
+                    @endphp
+                    <tbody class="divide-y divide-[#3E4C59]" x-data="{ expanded: false }">
                         <tr class="hover:bg-surface-hover transition-colors group">
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <p class="text-white text-sm font-bold">{{ $log->created_at->format('d M Y') }}</p>
@@ -242,18 +262,87 @@ class extends Component {
                                     {{ $log->description }}
                                 </p>
                             </td>
+
+                            <td class="px-6 py-4">
+                                @if($log->ip_address)
+                                    <span class="text-[11px] text-slate-400 font-mono bg-gray-900/50 px-2 py-1 rounded border border-[#3E4C59]">
+                                        {{ $log->ip_address }}
+                                    </span>
+                                @else
+                                    <span class="text-slate-600 text-xs">-</span>
+                                @endif
+                            </td>
+
+                            <td class="px-6 py-4 text-center">
+                                @if($hasChanges)
+                                    <button @click="expanded = !expanded"
+                                        class="p-1.5 rounded-lg hover:bg-primary/10 text-slate-400 hover:text-primary transition-all"
+                                        :class="expanded ? 'bg-primary/10 text-primary' : ''">
+                                        <span class="material-symbols-outlined text-[18px] transition-transform"
+                                            :class="expanded ? 'rotate-180' : ''">expand_more</span>
+                                    </button>
+                                @else
+                                    <span class="text-slate-700 text-xs">-</span>
+                                @endif
+                            </td>
                         </tr>
-                        @empty
+
+                        {{-- EXPANDABLE DETAIL ROW --}}
+                        @if($hasChanges)
+                        <tr x-show="expanded" x-transition.duration.200ms x-cloak>
+                            <td colspan="7" class="px-6 py-4 bg-gray-900/40">
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-4xl">
+                                    @if($log->old_values)
+                                    <div>
+                                        <p class="text-[10px] font-black uppercase tracking-widest text-red-400 mb-2 flex items-center gap-1">
+                                            <span class="material-symbols-outlined text-[14px]">remove_circle</span>
+                                            Data Sebelum
+                                        </p>
+                                        <div class="bg-red-500/5 border border-red-500/20 rounded-lg p-3 space-y-1">
+                                            @foreach($log->old_values as $key => $value)
+                                                <div class="flex justify-between text-xs">
+                                                    <span class="text-slate-500 font-mono">{{ $key }}</span>
+                                                    <span class="text-red-300 font-mono">{{ is_array($value) ? json_encode($value) : $value }}</span>
+                                                </div>
+                                            @endforeach
+                                        </div>
+                                    </div>
+                                    @endif
+
+                                    @if($log->new_values)
+                                    <div>
+                                        <p class="text-[10px] font-black uppercase tracking-widest text-emerald-400 mb-2 flex items-center gap-1">
+                                            <span class="material-symbols-outlined text-[14px]">add_circle</span>
+                                            Data Sesudah
+                                        </p>
+                                        <div class="bg-emerald-500/5 border border-emerald-500/20 rounded-lg p-3 space-y-1">
+                                            @foreach($log->new_values as $key => $value)
+                                                <div class="flex justify-between text-xs">
+                                                    <span class="text-slate-500 font-mono">{{ $key }}</span>
+                                                    <span class="text-emerald-300 font-mono">{{ is_array($value) ? json_encode($value) : $value }}</span>
+                                                </div>
+                                            @endforeach
+                                        </div>
+                                    </div>
+                                    @endif
+                                </div>
+                            </td>
+                        </tr>
+                        @endif
+                    </tbody>
+
+                    @empty
+                    <tbody>
                         <tr>
-                            <td colspan="5" class="py-24 text-center">
+                            <td colspan="7" class="py-24 text-center">
                                 <div class="flex flex-col items-center opacity-20">
                                     <span class="material-symbols-outlined text-6xl">history</span>
                                     <p class="mt-2 font-black uppercase tracking-widest text-xs">Data log kosong</p>
                                 </div>
                             </td>
                         </tr>
-                        @endforelse
                     </tbody>
+                    @endforelse
                 </table>
             </div>
         </div>
