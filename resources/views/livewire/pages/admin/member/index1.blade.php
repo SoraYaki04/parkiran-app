@@ -521,7 +521,7 @@ class extends Component
                 {{ $isEdit ? 'Edit Member' : 'Tambah Member' }}
             </h3>
 
-            <form wire:submit.prevent="save" class="space-y-3">
+            <form wire:submit.prevent="save" wire:confirm="Apakah anda yakin?" class="space-y-3">
 
                 {{-- KODE MEMBER --}}
                 <div>

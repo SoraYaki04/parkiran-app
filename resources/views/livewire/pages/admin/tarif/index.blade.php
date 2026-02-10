@@ -281,7 +281,7 @@ class extends Component {
                 {{ $isEdit ? 'Edit Tarif Parkir' : 'Tambah Tarif Parkir' }}
             </h3>
 
-            <form wire:submit.prevent="save" class="space-y-3">
+            <form wire:submit.prevent="save" wire:confirm="Apakah anda yakin?" class="space-y-3">
 
                 <div>
                     <label class="text-sm text-gray-400">Tipe Kendaraan</label>

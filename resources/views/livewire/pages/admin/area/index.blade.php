@@ -480,7 +480,7 @@ class extends Component {
                 </h3>
             </div>
 
-            <form wire:submit.prevent="save" class="flex-1 overflow-y-auto px-6 py-4 space-y-4 scrollbar-hide">
+            <form wire:submit.prevent="save" wire:confirm="Apakah anda yakin?" class="flex-1 overflow-y-auto px-6 py-4 space-y-4 scrollbar-hide">
 
                 <!-- KODE AREA -->
                 <div>

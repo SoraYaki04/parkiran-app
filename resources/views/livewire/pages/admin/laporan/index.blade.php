@@ -63,7 +63,7 @@ class extends Component {
             $this->tanggalHarian
         );
 
-        return redirect()->route('admin.export.harian.pdf', [
+        return redirect()->route('export.laporan-harian.pdf', [
             'tanggal' => $this->tanggalHarian
         ]);
     }
@@ -80,7 +80,7 @@ class extends Component {
             $this->tanggalHarian
         );
 
-        return redirect()->route('admin.export.harian.excel', [
+        return redirect()->route('export.laporan-harian.excel', [
             'tanggal' => $this->tanggalHarian
         ]);
     }
@@ -97,7 +97,7 @@ class extends Component {
             "{$this->tanggalMulai} s/d {$this->tanggalAkhir}"
         );
 
-        return redirect()->route('admin.export.rentang.pdf', [
+        return redirect()->route('export.rentang.pdf', [
             'mulai' => $this->tanggalMulai,
             'akhir' => $this->tanggalAkhir
         ]);
@@ -115,7 +115,7 @@ class extends Component {
             "{$this->tanggalMulai} s/d {$this->tanggalAkhir}"
         );
 
-        return redirect()->route('admin.export.rentang.excel', [
+        return redirect()->route('export.rentang.excel', [
             'mulai' => $this->tanggalMulai,
             'akhir' => $this->tanggalAkhir
         ]);
@@ -129,7 +129,7 @@ class extends Component {
             "{$this->tanggalMulai} s/d {$this->tanggalAkhir}"
         );
 
-        return redirect()->route('admin.export.analytics.csv', [
+        return redirect()->route('export.analytics.csv', [
             'mulai' => $this->tanggalMulai,
             'akhir' => $this->tanggalAkhir
         ]);
@@ -676,8 +676,9 @@ class extends Component {
             @if($activeTab === 'analytics')
             <div class="space-y-6" 
                  wire:key="analytics-tab"
+                 wire:ignore.self
                  x-data="analyticsCharts(@js($this->revenueChartData), @js($this->vehicleDistribution), @js($this->occupancyTrend), @js($this->paymentMethodDistribution))"
-                 x-init="initCharts()">
+                 x-init="$nextTick(() => initCharts())">
 
                 {{-- Summary Cards --}}
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -802,6 +803,8 @@ class extends Component {
 @push('scripts')
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script>
+
+
 // Alpine.js component for analytics charts
 document.addEventListener('alpine:init', () => {
     Alpine.data('analyticsCharts', (revenueData, vehicleData, occupancyData, paymentData) => ({
@@ -812,10 +815,10 @@ document.addEventListener('alpine:init', () => {
         paymentData: paymentData,
 
         initCharts() {
-            // Small delay to ensure canvas elements are in DOM
-            this.$nextTick(() => {
+            // Use setTimeout to ensure canvas elements are fully rendered in the DOM
+            setTimeout(() => {
                 this.renderCharts();
-            });
+            }, 150);
         },
 
         renderCharts() {
