@@ -26,11 +26,18 @@ class extends Component {
     public string $tanggalMulai;
     public string $tanggalAkhir;
 
+    // Analytics Filter
+    public $filterMonth;
+    public $filterYear;
+
     public function mount()
     {
         $this->tanggalHarian = Carbon::today()->format('Y-m-d');
         $this->tanggalMulai = Carbon::today()->subDays(7)->format('Y-m-d');
         $this->tanggalAkhir = Carbon::today()->format('Y-m-d');
+
+        $this->filterMonth = Carbon::now()->month;
+        $this->filterYear = Carbon::now()->year;
     }
 
     /* ======================
@@ -270,19 +277,83 @@ class extends Component {
         ANALYTICS DATA
     =======================*/
 
-    // Revenue per day for last 7 days (for Bar Chart)
+    // Revenue per day for last 7 days + Forecast (Linear Regression)
     public function getRevenueChartDataProperty()
     {
         $labels = [];
-        $data = [];
-
+        $actualData = [];
+        $forecastData = [];
+        
+        // 1. Get Actual Data (Last 7 Days)
+        $points = []; // [x, y] for regression
         for ($i = 6; $i >= 0; $i--) {
             $date = Carbon::today()->subDays($i);
-            $labels[] = $date->translatedFormat('D, d M');
-            $data[] = Pembayaran::whereDate('tanggal_bayar', $date)->sum('total_bayar');
+            $labels[] = $date->translatedFormat('d M');
+            $revenue = Pembayaran::whereDate('tanggal_bayar', $date)->sum('total_bayar');
+            $actualData[] = $revenue;
+            $points[] = ['x' => 6 - $i, 'y' => $revenue]; // x: 0 to 6
         }
 
-        return ['labels' => $labels, 'data' => $data];
+        // 2. Linear Regression (y = mx + b)
+        $n = count($points);
+        if ($n > 1) {
+            $sumX = 0; $sumY = 0; $sumXY = 0; $sumXX = 0;
+            foreach ($points as $p) {
+                $sumX += $p['x'];
+                $sumY += $p['y'];
+                $sumXY += ($p['x'] * $p['y']);
+                $sumXX += ($p['x'] * $p['x']);
+            }
+            
+            $slope = ($n * $sumXY - $sumX * $sumY) / ($n * $sumXX - $sumX * $sumX);
+            $intercept = ($sumY - $slope * $sumX) / $n;
+
+            // 3. Project Next 7 Days
+            for ($i = 1; $i <= 7; $i++) {
+                $futureDate = Carbon::today()->addDays($i);
+                $labels[] = $futureDate->translatedFormat('d M') . ' (Prediksi)';
+                
+                // Keep actual data null for future points
+                $actualData[] = null;
+
+                // Calculate forecast
+                $x = 6 + $i; // Continue x sequence
+                $y = max(0, $slope * $x + $intercept); // No negative revenue
+                $forecastData[] = round($y);
+            }
+            
+            // Fill previous forecast data with nulls to align
+            $forecastData = array_merge(array_fill(0, 7, null), $forecastData);
+             // Add the last actual point to forecast to connect lines
+             $forecastData[6] = $actualData[6];
+
+        } else {
+             // Fallback if not enough data
+             $forecastData = [];
+        }
+
+        return [
+            'labels' => $labels,
+            'datasets' => [
+                [
+                    'label' => 'Pendapatan Aktual',
+                    'data' => $actualData,
+                    'borderColor' => '#10B981', // Emerald 500
+                    'backgroundColor' => 'rgba(16, 185, 129, 0.1)',
+                    'fill' => true,
+                    'tension' => 0.4
+                ],
+                [
+                    'label' => 'Forecast (Linear Trend)',
+                    'data' => $forecastData,
+                    'borderColor' => '#F59E0B', // Amber 500
+                    'borderDash' => [5, 5],
+                    'fill' => false,
+                    'tension' => 0.4
+                ]
+            ],
+            'trend_desc' => $n > 1 ? ($slope > 0 ? "Tren Positif (+)" : "Tren Negatif (-)") . " Rata-rata pertumbuhan harian: Rp " . number_format($slope, 0, ',', '.') : "Data tidak cukup"
+        ];
     }
 
     // Vehicle Type Distribution (for Pie Chart)
@@ -307,67 +378,135 @@ class extends Component {
         return $distribution->values()->toArray();
     }
 
-    // Peak Hour Analysis
+    // Peak Hour Analysis (Filtered by Month/Year)
     public function getPeakHourAnalysisProperty()
     {
-        $mulai = Carbon::parse($this->tanggalMulai)->startOfDay();
-        $akhir = Carbon::parse($this->tanggalAkhir)->endOfDay();
+        // 1. Filter by Selected Month & Year
+        $query = ParkirSessions::whereYear('confirmed_at', $this->filterYear)
+            ->whereMonth('confirmed_at', $this->filterMonth)
+            ->where('status', 'finished');
 
-        $peakHours = ParkirSessions::whereBetween('confirmed_at', [$mulai, $akhir])
-            ->where('status', 'finished')
+        // 2. Group by Hour
+        $peakHours = (clone $query)
             ->select(DB::raw('HOUR(confirmed_at) as hour'), DB::raw('count(*) as total'))
             ->groupBy(DB::raw('HOUR(confirmed_at)'))
             ->orderBy('total', 'desc')
             ->take(5)
             ->get();
 
-        $avgDuration = TransaksiParkir::whereBetween('waktu_masuk', [$mulai, $akhir])
+        // 3. Stacked Bar Data (Hour x Vehicle Type) for Chart
+        $hourlyDistribution = (clone $query)
+             ->select(
+                DB::raw('HOUR(confirmed_at) as hour'),
+                'tipe_kendaraan_id',
+                DB::raw('count(*) as total')
+             )
+             ->groupBy(DB::raw('HOUR(confirmed_at)'), 'tipe_kendaraan_id')
+             ->get();
+        
+        // Prepare Chart Data
+        $chartLabels = range(0, 23); // 00:00 - 23:00
+        $chartDatasets = [];
+        $types = TipeKendaraan::all();
+        $colors = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6']; // Blue, Green, Amber, Red, Violet
+
+        foreach ($types as $index => $type) {
+            $data = array_fill(0, 24, 0);
+            foreach ($hourlyDistribution as $item) {
+                if ($item->tipe_kendaraan_id == $type->id) {
+                    $data[$item->hour] = $item->total;
+                }
+            }
+            
+            $chartDatasets[] = [
+                'label' => $type->nama_tipe,
+                'data' => $data,
+                'backgroundColor' => $colors[$index % count($colors)],
+            ];
+        }
+
+        $avgDuration = TransaksiParkir::whereYear('waktu_masuk', $this->filterYear)
+            ->whereMonth('waktu_masuk', $this->filterMonth)
             ->whereNotNull('durasi_menit')
             ->avg('durasi_menit');
 
         return [
             'peak_hours' => $peakHours,
             'avg_duration' => round($avgDuration ?? 0, 1),
+            'chart_data' => [
+                'labels' => array_map(fn($h) => str_pad($h, 2, '0', STR_PAD_LEFT).":00", $chartLabels),
+                'datasets' => $chartDatasets
+            ]
         ];
     }
 
     // Member Performance
     public function getMemberPerformanceProperty()
     {
-        $mulai = Carbon::parse($this->tanggalMulai)->startOfDay();
-        $akhir = Carbon::parse($this->tanggalAkhir)->endOfDay();
+        if ($this->activeTab === 'analytics') {
+            $mulai = Carbon::createFromDate($this->filterYear, $this->filterMonth, 1)->startOfMonth();
+            $akhir = $mulai->copy()->endOfMonth();
+        } else {
+            $mulai = Carbon::parse($this->tanggalMulai)->startOfDay();
+            $akhir = Carbon::parse($this->tanggalAkhir)->endOfDay();
+        }
 
-        $memberTransactions = TransaksiParkir::whereBetween('waktu_masuk', [$mulai, $akhir])
-            ->whereNotNull('member_id')
-            ->count();
+        $baseQuery = TransaksiParkir::whereBetween('waktu_keluar', [$mulai, $akhir]);
 
-        $nonMemberTransactions = TransaksiParkir::whereBetween('waktu_masuk', [$mulai, $akhir])
-            ->whereNull('member_id')
-            ->count();
+        $memberStats = (clone $baseQuery)
+            ->selectRaw('
+                COUNT(CASE WHEN member_id IS NOT NULL THEN 1 END) as member_trx,
+                COUNT(CASE WHEN member_id IS NULL THEN 1 END) as non_member_trx,
+                SUM(CASE WHEN member_id IS NOT NULL THEN total_bayar ELSE 0 END) as member_rev,
+                SUM(CASE WHEN member_id IS NULL THEN total_bayar ELSE 0 END) as non_member_rev
+            ')
+            ->first();
 
-        $memberRevenue = TransaksiParkir::whereBetween('waktu_masuk', [$mulai, $akhir])
-            ->whereNotNull('member_id')
-            ->join('pembayaran', 'transaksi_parkir.id', '=', 'pembayaran.transaksi_parkir_id')
-            ->sum('pembayaran.total_bayar');
-
-        $nonMemberRevenue = TransaksiParkir::whereBetween('waktu_masuk', [$mulai, $akhir])
-            ->whereNull('member_id')
-            ->join('pembayaran', 'transaksi_parkir.id', '=', 'pembayaran.transaksi_parkir_id')
-            ->sum('pembayaran.total_bayar');
+        // Join with pembayaran is tricky for aggregates in one go if multiple payments?
+        // Assuming 1-to-1 or total_bayar is in TransaksiParkir correctly (it is).
+        // My schema has total_bayar in TransaksiParkir.
 
         return [
-            'member_transactions' => $memberTransactions,
-            'non_member_transactions' => $nonMemberTransactions,
-            'member_revenue' => $memberRevenue,
-            'non_member_revenue' => $nonMemberRevenue,
+            'member_transactions' => $memberStats->member_trx ?? 0,
+            'non_member_transactions' => $memberStats->non_member_trx ?? 0,
+            'member_revenue' => $memberStats->member_rev ?? 0,
+            'non_member_revenue' => $memberStats->non_member_rev ?? 0,
+        ];
+    }
+
+    public function getMemberRevenueDistributionProperty()
+    {
+        $perf = $this->memberPerformance;
+        $total = $perf['member_revenue'] + $perf['non_member_revenue'];
+        
+        // Avoid division by zero
+        $pctMember = $total > 0 ? round(($perf['member_revenue'] / $total) * 100, 1) : 0;
+        $pctNonMember = $total > 0 ? round(($perf['non_member_revenue'] / $total) * 100, 1) : 0;
+
+        return [
+            'total_revenue' => $total,
+            'pct_member' => $pctMember,
+            'chart_data' => [
+                'labels' => ['Member (' . $pctMember . '%)', 'Non-Member (' . $pctNonMember . '%)'],
+                'datasets' => [[
+                    'data' => [$perf['member_revenue'], $perf['non_member_revenue']],
+                    'backgroundColor' => ['#10B981', '#64748b'], // Green-500, Slate-500
+                    'borderWidth' => 0
+                ]]
+            ]
         ];
     }
 
     // Payment Method Distribution (for Pie Chart)
     public function getPaymentMethodDistributionProperty()
     {
-        $mulai = Carbon::parse($this->tanggalMulai)->startOfDay();
-        $akhir = Carbon::parse($this->tanggalAkhir)->endOfDay();
+        if ($this->activeTab === 'analytics') {
+            $mulai = Carbon::createFromDate($this->filterYear, $this->filterMonth, 1)->startOfMonth();
+            $akhir = $mulai->copy()->endOfMonth();
+        } else {
+            $mulai = Carbon::parse($this->tanggalMulai)->startOfDay();
+            $akhir = Carbon::parse($this->tanggalAkhir)->endOfDay();
+        }
 
         $distribution = Pembayaran::whereBetween('tanggal_bayar', [$mulai, $akhir])
             ->select('metode_pembayaran', DB::raw('sum(total_bayar) as total'))
@@ -529,14 +668,20 @@ class extends Component {
 
             @if($activeTab === 'analytics')
                 <div class="flex items-center gap-2 px-3 border-r border-[#3E4C59]">
-                    <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Dari</span>
-                    <input type="date" wire:model.live="tanggalMulai"
-                        class="bg-transparent border-none text-white text-xs font-semibold focus:ring-1 focus:ring-primary [color-scheme:dark] cursor-pointer">
+                    <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Bulan</span>
+                    <select wire:model.live="filterMonth" class="bg-transparent border-none text-white text-xs font-semibold focus:ring-1 focus:ring-primary cursor-pointer w-24">
+                        @for($m=1; $m<=12; $m++)
+                            <option value="{{ $m }}">{{ \Carbon\Carbon::create()->month($m)->translatedFormat('F') }}</option>
+                        @endfor
+                    </select>
                 </div>
                 <div class="flex items-center gap-2 px-3">
-                    <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Sampai</span>
-                    <input type="date" wire:model.live="tanggalAkhir"
-                        class="bg-transparent border-none text-white text-xs font-semibold focus:ring-1 focus:ring-primary [color-scheme:dark] cursor-pointer">
+                    <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Tahun</span>
+                    <select wire:model.live="filterYear" class="bg-transparent border-none text-white text-xs font-semibold focus:ring-1 focus:ring-primary cursor-pointer w-20">
+                        @for($y=date('Y'); $y>=2020; $y--)
+                            <option value="{{ $y }}">{{ $y }}</option>
+                        @endfor
+                    </select>
                 </div>
             @endif
         </div>
@@ -678,12 +823,16 @@ class extends Component {
             @endif
 
             {{-- ==================== ANALYTICS TAB ==================== --}}
-            @if($activeTab === 'analytics')
-            <div class="space-y-6" 
-                 wire:key="analytics-tab"
-                 wire:ignore.self
-                 x-data="analyticsCharts(@js($this->revenueChartData), @js($this->vehicleDistribution), @js($this->occupancyTrend), @js($this->paymentMethodDistribution))"
-                 x-init="$nextTick(() => initCharts())">
+             @if($activeTab === 'analytics')
+             <div class="space-y-6" 
+                  wire:key="analytics-tab-{{ $filterMonth }}-{{ $filterYear }}"
+                  x-data="analyticsCharts(
+                      @js($this->revenueChartData), 
+                      @js($this->vehicleDistribution), 
+                      @js($this->memberRevenueDistribution), 
+                      @js($this->paymentMethodDistribution), 
+                      @js($this->peakHourAnalysis)
+                  )">
 
                 {{-- Summary Cards --}}
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
@@ -713,15 +862,23 @@ class extends Component {
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {{-- Revenue Bar Chart --}}
                     <div class="bg-surface-dark border border-[#3E4C59] rounded-xl p-5">
-                        <h3 class="text-white text-xs font-black uppercase tracking-widest mb-4">Pendapatan 7 Hari Terakhir</h3>
+                        <div class="mb-4">
+                            <h3 class="text-white text-xs font-black uppercase tracking-widest">Forecast Pendapatan</h3>
+                            <p class="text-[10px] text-slate-400 mt-1">
+                                {{ $this->revenueChartData['trend_desc'] }}
+                            </p>
+                        </div>
                         <div class="h-64">
-                            <canvas id="revenueBarChart"></canvas>
+                            <canvas id="revenueChart"></canvas>
                         </div>
                     </div>
 
                     {{-- Vehicle Distribution Pie Chart --}}
                     <div class="bg-surface-dark border border-[#3E4C59] rounded-xl p-5">
-                        <h3 class="text-white text-xs font-black uppercase tracking-widest mb-4">Distribusi Tipe Kendaraan</h3>
+                        <div class="mb-4">
+                             <h3 class="text-white text-xs font-black uppercase tracking-widest">Distribusi Kendaraan</h3>
+                             <p class="text-[10px] text-slate-400 mt-1">Proporsi tipe kendaraan berdasarkan transaksi.</p>
+                        </div>
                         <div class="h-64 flex items-center justify-center">
                             <canvas id="vehiclePieChart"></canvas>
                         </div>
@@ -730,19 +887,40 @@ class extends Component {
 
                 {{-- Charts Row 2 --}}
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {{-- Occupancy Line Chart --}}
+                    {{-- Peak Hour Prediction --}}
                     <div class="bg-surface-dark border border-[#3E4C59] rounded-xl p-5">
-                        <h3 class="text-white text-xs font-black uppercase tracking-widest mb-4">Trend Occupancy (7 Hari)</h3>
+                         <div class="mb-4">
+                            <h3 class="text-white text-xs font-black uppercase tracking-widest">Prediksi Jam Sibuk ({{ \Carbon\Carbon::create()->month($filterMonth)->translatedFormat('F') }} {{ $filterYear }})</h3>
+                            <p class="text-[10px] text-slate-400 mt-1">Analisis kepadatan per jam berdasarkan historis data.</p>
+                        </div>
                         <div class="h-64">
-                            <canvas id="occupancyLineChart"></canvas>
+                            <canvas id="peakHourChart"></canvas>
                         </div>
                     </div>
 
-                    {{-- Payment Method Pie Chart --}}
+                    {{-- Member Revenue Distribution --}}
                     <div class="bg-surface-dark border border-[#3E4C59] rounded-xl p-5">
-                        <h3 class="text-white text-xs font-black uppercase tracking-widest mb-4">Metode Pembayaran</h3>
+                        <div class="mb-4">
+                            <h3 class="text-white text-xs font-black uppercase tracking-widest">Distribusi Revenue Member</h3>
+                            <p class="text-[10px] text-slate-400 mt-1">Proporsi pendapatan dari member berdasarkan kategori.</p>
+                        </div>
                         <div class="h-64 flex items-center justify-center">
-                            <canvas id="paymentPieChart"></canvas>
+                            <canvas id="memberRevenueChart"></canvas>
+                        </div>
+                    </div>
+                    </div>
+                </div>
+
+                {{-- Charts Row 3: Payment Method --}}
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {{-- Payment Method Distribution --}}
+                     <div class="bg-surface-dark border border-[#3E4C59] rounded-xl p-5">
+                        <div class="mb-4">
+                            <h3 class="text-white text-xs font-black uppercase tracking-widest">Metode Pembayaran (Revenue)</h3>
+                            <p class="text-[10px] text-slate-400 mt-1">Distribusi pendapatan berdasarkan metode pembayaran.</p>
+                        </div>
+                        <div class="h-64 flex items-center justify-center">
+                            <canvas id="paymentMethodChart"></canvas>
                         </div>
                     </div>
                 </div>
@@ -777,6 +955,174 @@ class extends Component {
     </div>
 </div>
 
+@script
+<script>
+    Livewire.hook('morph.updated', ({ component, el }) => {
+        // Re-init charts if we are on analytics tab
+        if(document.getElementById('revenueChart')) {
+            window.dispatchEvent(new Event('init-charts'));
+        }
+    });
+</script>
+@endscript
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+    (function() {
+        const registerAnalyticsCharts = () => {
+            Alpine.data('analyticsCharts', (revenueData, vehicleDist, memberRevenueData, paymentDist, peakHourData) => ({
+                charts: {},
+                memberRevenueData: memberRevenueData, // Make data accessible to x-text
+                
+                init() {
+                    // Check if Chart is loaded, if not wait a bit
+                    if (typeof Chart === 'undefined') {
+                        setTimeout(() => this.init(), 100);
+                        return;
+                    }
+                    this.initCharts();
+                },
+
+                initCharts() {
+                    this.destroyCharts();
+
+                    // 1. Revenue & Forecast Chart
+                    const ctx1 = document.getElementById('revenueChart');
+                    if (ctx1 && revenueData) {
+                        this.charts.revenue = new Chart(ctx1, {
+                            type: 'line',
+                            data: {
+                                labels: revenueData.labels,
+                                datasets: revenueData.datasets
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                interaction: { mode: 'index', intersect: false },
+                                plugins: {
+                                    legend: { labels: { color: '#94a3b8' } },
+                                    tooltip: { 
+                                        mode: 'index',
+                                        intersect: false 
+                                    }
+                                },
+                                 scales: {
+                                    y: {
+                                        beginAtZero: true,
+                                        grid: { color: '#334155' },
+                                        ticks: { color: '#94a3b8' }
+                                    },
+                                    x: {
+                                        grid: { display: false },
+                                        ticks: { color: '#94a3b8' }
+                                    }
+                                }
+                            }
+                        });
+                    }
+
+                    // 2. Vehicle Distribution (Pie)
+                    const ctx2 = document.getElementById('vehiclePieChart');
+                    if (ctx2 && vehicleDist) {
+                         this.charts.vehicle = new Chart(ctx2, {
+                            type: 'doughnut',
+                            data: {
+                                labels: vehicleDist.map(d => d.label),
+                                datasets: [{
+                                    data: vehicleDist.map(d => d.value),
+                                    backgroundColor: ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'],
+                                    borderWidth: 0
+                                }]
+                            },
+                             options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    legend: { position: 'right', labels: { color: '#94a3b8', font: { size: 10 } } }
+                                }
+                            }
+                        });
+                    }
+
+                    // 3. Peak Hour Prediction (Stacked Bar)
+                    const ctx3 = document.getElementById('peakHourChart');
+                    if(ctx3 && peakHourData) {
+                         this.charts.peakHour = new Chart(ctx3, {
+                            type: 'bar',
+                            data: peakHourData.chart_data,
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                scales: {
+                                    x: { stacked: true, grid: { display: false }, ticks: { color: '#94a3b8', font: { size: 9 } } },
+                                    y: { stacked: true, grid: { color: '#334155' }, ticks: { color: '#94a3b8' } }
+                                },
+                                plugins: {
+                                    legend: { labels: { color: '#94a3b8', boxWidth: 10 } },
+                                }
+                            }
+                        });
+                    }
+
+                    // 4. Member Revenue Distribution (Doughnut)
+                    const ctx4 = document.getElementById('memberRevenueChart');
+                    if (ctx4 && memberRevenueData) {
+                        this.charts.memberRevenue = new Chart(ctx4, {
+                            type: 'doughnut',
+                            data: memberRevenueData.chart_data,
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                cutout: '70%', // Donut style
+                                plugins: {
+                                    legend: { position: 'bottom', labels: { color: '#94a3b8', font: { size: 10 } } }
+                                }
+                            }
+                        });
+
+                    }
+
+                    // 5. Payment Method Distribution (Pie)
+                    const ctx5 = document.getElementById('paymentMethodChart');
+                    if (ctx5 && paymentDist) {
+                        this.charts.payment = new Chart(ctx5, {
+                            type: 'pie', // Pie chart for contrast
+                            data: {
+                                labels: paymentDist.map(d => d.label),
+                                datasets: [{
+                                    data: paymentDist.map(d => d.value),
+                                    backgroundColor: ['#6366f1', '#14b8a6', '#f43f5e', '#eab308'], // Indigo, Teal, Rose, Yellow
+                                    borderWidth: 0
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    legend: { position: 'right', labels: { color: '#94a3b8', font: { size: 10 } } }
+                                }
+                            }
+                        });
+                    }
+                },
+
+                destroyCharts() {
+                    Object.values(this.charts).forEach(chart => {
+                        if(chart) chart.destroy();
+                    });
+                    this.charts = {};
+                }
+            }));
+        };
+
+        if (typeof Alpine !== 'undefined') {
+            registerAnalyticsCharts();
+        } else {
+            document.addEventListener('alpine:init', registerAnalyticsCharts);
+        }
+    })();
+</script>
+
 @push('styles')
     
 {{-- Print Styles --}}
@@ -805,146 +1151,3 @@ class extends Component {
 </style>
 @endpush
 
-@push('scripts')
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-<script>
-
-
-// Alpine.js component for analytics charts
-document.addEventListener('alpine:init', () => {
-    Alpine.data('analyticsCharts', (revenueData, vehicleData, occupancyData, paymentData) => ({
-        chartInstances: {},
-        revenueData: revenueData,
-        vehicleData: vehicleData,
-        occupancyData: occupancyData,
-        paymentData: paymentData,
-
-        initCharts() {
-            // Use setTimeout to ensure canvas elements are fully rendered in the DOM
-            setTimeout(() => {
-                this.renderCharts();
-            }, 150);
-        },
-
-        renderCharts() {
-            // Destroy existing charts
-            Object.values(this.chartInstances).forEach(chart => {
-                if (chart) chart.destroy();
-            });
-            this.chartInstances = {};
-
-            // Chart.js default styling for dark mode
-            Chart.defaults.color = '#94a3b8';
-            Chart.defaults.borderColor = '#3E4C59';
-
-            // Revenue Bar Chart
-            const revenueCtx = document.getElementById('revenueBarChart');
-            if (revenueCtx && this.revenueData) {
-                this.chartInstances.revenue = new Chart(revenueCtx, {
-                    type: 'bar',
-                    data: {
-                        labels: this.revenueData.labels || [],
-                        datasets: [{
-                            label: 'Pendapatan (Rp)',
-                            data: this.revenueData.data || [],
-                            backgroundColor: 'rgba(34, 197, 94, 0.7)',
-                            borderColor: 'rgba(34, 197, 94, 1)',
-                            borderWidth: 1,
-                            borderRadius: 6,
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: { legend: { display: false } },
-                        scales: {
-                            y: {
-                                beginAtZero: true,
-                                ticks: { callback: value => 'Rp ' + value.toLocaleString('id-ID') }
-                            }
-                        }
-                    }
-                });
-            }
-
-            // Vehicle Pie Chart
-            const vehicleCtx = document.getElementById('vehiclePieChart');
-            if (vehicleCtx && this.vehicleData && this.vehicleData.length > 0) {
-                this.chartInstances.vehicle = new Chart(vehicleCtx, {
-                    type: 'doughnut',
-                    data: {
-                        labels: this.vehicleData.map(v => v.label),
-                        datasets: [{
-                            data: this.vehicleData.map(v => v.value),
-                            backgroundColor: ['#3b82f6', '#f97316', '#22c55e', '#a855f7', '#eab308', '#ec4899'],
-                            borderWidth: 0,
-                            hoverOffset: 4
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: { legend: { position: 'right' } }
-                    }
-                });
-            }
-
-            // Occupancy Line Chart
-            const occupancyCtx = document.getElementById('occupancyLineChart');
-            if (occupancyCtx && this.occupancyData) {
-                this.chartInstances.occupancy = new Chart(occupancyCtx, {
-                    type: 'line',
-                    data: {
-                        labels: this.occupancyData.labels || [],
-                        datasets: [{
-                            label: 'Occupancy Rate (%)',
-                            data: this.occupancyData.data || [],
-                            borderColor: '#3b82f6',
-                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                            tension: 0.4,
-                            fill: true,
-                            pointBackgroundColor: '#3b82f6',
-                            pointRadius: 4,
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: { legend: { display: false } },
-                        scales: {
-                            y: {
-                                beginAtZero: true,
-                                max: 100,
-                                ticks: { callback: value => value + '%' }
-                            }
-                        }
-                    }
-                });
-            }
-
-            // Payment Pie Chart
-            const paymentCtx = document.getElementById('paymentPieChart');
-            if (paymentCtx && this.paymentData && this.paymentData.length > 0) {
-                this.chartInstances.payment = new Chart(paymentCtx, {
-                    type: 'doughnut',
-                    data: {
-                        labels: this.paymentData.map(p => p.label),
-                        datasets: [{
-                            data: this.paymentData.map(p => p.value),
-                            backgroundColor: ['#22c55e', '#3b82f6', '#f97316', '#a855f7', '#eab308'],
-                            borderWidth: 0,
-                            hoverOffset: 4
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: { legend: { position: 'right' } }
-                    }
-                });
-            }
-        }
-    }));
-});
-</script>
-@endpush
