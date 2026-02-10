@@ -555,14 +555,17 @@ class extends Component {
                     </label>
 
                     @if (in_array($tipe->id, $selectedTipe))
-                        <input
-                            type="number"
-                            min="1"
-                            wire:model.defer="kapasitas.{{ $tipe->id }}"
-                            @if($hasTerisi) disabled @endif
-                            placeholder="Jumlah slot untuk {{ $tipe->nama_tipe }}"
-                            class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white
-                                {{ $hasTerisi ? 'opacity-60 cursor-not-allowed' : '' }}">
+                    <input
+                        type="number"
+                        oninput="this.value=this.value.replace(/[^0-9]/g,'');"
+                        min="1"
+                        step="1"
+                        wire:model.defer="kapasitas.{{ $tipe->id }}"
+                        placeholder="Jumlah slot untuk {{ $tipe->nama_tipe }}"
+                        class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white
+                            {{ $hasTerisi ? 'opacity-60 cursor-not-allowed' : '' }}">
+
+                            
                     @endif
 
 

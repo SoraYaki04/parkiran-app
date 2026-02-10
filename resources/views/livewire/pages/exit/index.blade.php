@@ -661,27 +661,51 @@ public function finalizeExit()
         function formatPlatDash(el) {
             let value = el.value.toUpperCase();
 
-            // buang semua kecuali huruf & angka
+            // hapus semua karakter selain huruf dan angka
             value = value.replace(/[^A-Z0-9]/g, '');
+            console.log('Input dibersihkan:', value);
 
             let depan = '';
             let nomor = '';
             let belakang = '';
 
-            // 1–2 huruf depan
-            depan = value.match(/^[A-Z]{1,2}/)?.[0] ?? '';
-            value = value.slice(depan.length);
+            let i = 0;
 
-            // 1–5 angka tengah
-            nomor = value.match(/^\d{1,5}/)?.[0] ?? '';
-            value = value.slice(nomor.length);
+            // Bagian depan: huruf 1-2
+            while(i < value.length && depan.length < 2 && /[A-Z]/.test(value[i])) {
+                depan += value[i];
+                i++;
+            }
+            console.log('Bagian depan (huruf):', depan, 'sampai index:', i);
 
-            // 0–3 huruf belakang
-            belakang = value.slice(0, 3);
+            // Bagian tengah: angka 1-4 → hanya jika huruf depan ada
+            if(depan.length > 0) {
+                while(i < value.length && nomor.length < 4 && /[0-9]/.test(value[i])) {
+                    nomor += value[i];
+                    i++;
+                }
+            }
+            console.log('Bagian tengah (angka):', nomor, 'sampai index:', i);
 
+            // Bagian belakang: huruf 0-3 → hanya jika angka tengah ada
+            if(nomor.length > 0) {
+                while(i < value.length && belakang.length < 3 && /[A-Z]/.test(value[i])) {
+                    belakang += value[i];
+                    i++;
+                }
+            }
+            console.log('Bagian belakang (huruf):', belakang, 'sampai index:', i);
+
+            // sisa input yang diabaikan
+            let sisa = value.slice(i);
+            if(sisa.length > 0) console.log('Sisa input yang diabaikan:', sisa);
+
+            // gabungkan dengan dash → hanya tambahkan dash jika bagian sebelumnya ada
             let hasil = depan;
-            if (nomor) hasil += '-' + nomor;
-            if (belakang) hasil += '-' + belakang;
+            if(nomor) hasil += '-' + nomor;
+            if(belakang) hasil += '-' + belakang;
+
+            console.log('Hasil akhir:', hasil);
 
             el.value = hasil;
         }

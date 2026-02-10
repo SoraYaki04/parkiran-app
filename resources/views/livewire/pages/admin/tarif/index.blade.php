@@ -311,8 +311,11 @@ class extends Component {
                 <div>
                     <label class="text-sm text-gray-400">Tarif</label>
                     <input wire:model="tarif" type="number"
-                           class="w-full bg-[#161e25] border border-[#3E4C59] rounded-lg px-4 py-2 text-white"
-                           placeholder="Tarif (Rp)">
+                        oninput="this.value=this.value.replace(/[^0-9]/g,'');"
+                        min="1"
+                        step="1"
+                        class="w-full bg-[#161e25] border border-[#3E4C59] rounded-lg px-4 py-2 text-white"
+                        placeholder="Tarif (Rp)">
                 </div>
 
                 <div class="flex justify-end gap-2 pt-4">
