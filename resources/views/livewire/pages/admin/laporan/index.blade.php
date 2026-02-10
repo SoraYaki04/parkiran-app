@@ -416,16 +416,16 @@ class extends Component {
 <div class="flex-1 flex-col h-full overflow-hidden flex">
 
     {{-- HEADER --}}
-    <header class="px-8 py-6 border-b border-gray-800 flex justify-between items-center">
+    <header class="px-4 md:px-8 py-4 md:py-6 border-b border-gray-800 flex flex-col sm:flex-row justify-between sm:items-center gap-3">
         <div>
-            <h2 class="text-white text-3xl font-black">Laporan & Analytics</h2>
-            <p class="text-slate-400">Statistik, analisis pendapatan & visualisasi data</p>
+            <h2 class="text-white text-2xl md:text-3xl font-black">Laporan & Analytics</h2>
+            <p class="text-slate-400 text-sm">Statistik, analisis pendapatan & visualisasi data</p>
         </div>
 
         {{-- EXPORT DROPDOWN --}}
         <div x-data="{ open: false }" class="relative">
             <button @click="open = !open" @click.away="open = false"
-                class="{{ ($activeTab === 'occupancy') ? 'opacity-50 cursor-not-allowed' : '' }} flex items-center gap-2 bg-primary text-black px-4 py-2 rounded-lg font-bold text-sm shadow-lg shadow-primary/20"
+                class="{{ ($activeTab === 'occupancy') ? 'opacity-50 cursor-not-allowed' : '' }} flex items-center gap-2 bg-primary text-black px-4 py-2 rounded-lg font-bold text-sm shadow-lg shadow-primary/20 w-fit"
                 @if($activeTab === 'occupancy') disabled @endif
                 >
                 <span class="material-symbols-outlined text-lg">download</span>
@@ -474,10 +474,10 @@ class extends Component {
     </header>
 
     {{-- ACTION BAR (TABS & FILTERS) --}}
-    <div class="px-8 pt-6 flex flex-col lg:flex-row lg:items-center justify-between gap-4 print:hidden">
+    <div class="px-4 md:px-8 pt-4 md:pt-6 flex flex-col lg:flex-row lg:items-center justify-between gap-3 md:gap-4 print:hidden">
         
         {{-- LEFT: TABS --}}
-        <div class="bg-surface-dark p-1.5 rounded-xl border border-[#3E4C59] inline-flex gap-1">
+        <div class="bg-surface-dark p-1.5 rounded-xl border border-[#3E4C59] inline-flex gap-1 overflow-x-auto">
             <button wire:click="setTab('harian')"
                 class="px-4 py-2 rounded-lg font-bold text-xs transition {{ $activeTab === 'harian' ? 'bg-primary text-black' : 'text-slate-400 hover:text-white' }}">
                 Harian
@@ -497,7 +497,7 @@ class extends Component {
         </div>
 
         {{-- RIGHT: DYNAMIC FILTERS --}}
-        <div class="flex items-center gap-3 bg-surface-dark/50 p-1.5 rounded-xl border border-[#3E4C59]/50">
+        <div class="flex flex-wrap items-center gap-2 md:gap-3 bg-surface-dark/50 p-1.5 rounded-xl border border-[#3E4C59]/50">
             @if($activeTab === 'harian')
                 <div class="flex items-center gap-2 px-3">
                     <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Pilih Tgl</span>
@@ -543,12 +543,12 @@ class extends Component {
     </div>
 
     {{-- CONTENT AREA --}}
-    <div class="flex-1 overflow-y-auto px-8 py-6 scrollbar-hide">
+    <div class="flex-1 overflow-y-auto px-4 md:px-8 py-4 md:py-6 scrollbar-hide">
         
         <div class="space-y-6">
             {{-- SUMMARY CARDS (Lebih Kecil) --}}
             @if($activeTab !== 'occupancy' && $activeTab !== 'analytics')
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
                 <div class="bg-surface-dark p-4 rounded-xl border border-[#3E4C59]">
                     <p class="text-slate-500 text-[10px] font-bold uppercase tracking-wider">Total Transaksi</p>
                     <p class="text-white text-xl font-black mt-1">
@@ -571,10 +571,11 @@ class extends Component {
                 
                 {{-- Per Tipe --}}
                 <div class="bg-surface-dark border border-[#3E4C59] rounded-xl overflow-hidden shadow-sm h-fit">
-                    <div class="bg-gray-900/60 px-5 py-3 border-b border-[#3E4C59]">
+                    <div class="bg-gray-900/60 px-4 md:px-5 py-3 border-b border-[#3E4C59]">
                         <h3 class="text-white text-xs font-black uppercase tracking-widest">Per Tipe Kendaraan</h3>
                     </div>
-                    <table class="w-full text-left">
+                    <div class="overflow-x-auto">
+                    <table class="w-full text-left min-w-[350px]">
                         <tbody class="divide-y divide-[#3E4C59]">
                             @foreach($data['per_tipe'] as $item)
                             <tr class="hover:bg-surface-hover transition-colors">
@@ -585,14 +586,16 @@ class extends Component {
                             @endforeach
                         </tbody>
                     </table>
+                    </div>
                 </div>
 
                 {{-- Per Metode --}}
                 <div class="bg-surface-dark border border-[#3E4C59] rounded-xl overflow-hidden shadow-sm h-fit">
-                    <div class="bg-gray-900/60 px-5 py-3 border-b border-[#3E4C59]">
+                    <div class="bg-gray-900/60 px-4 md:px-5 py-3 border-b border-[#3E4C59]">
                         <h3 class="text-white text-xs font-black uppercase tracking-widest">Metode Pembayaran</h3>
                     </div>
-                    <table class="w-full text-left">
+                    <div class="overflow-x-auto">
+                    <table class="w-full text-left min-w-[350px]">
                         <tbody class="divide-y divide-[#3E4C59]">
                             @foreach($data['per_metode'] as $item)
                             <tr class="hover:bg-surface-hover transition-colors">
@@ -604,16 +607,18 @@ class extends Component {
                         </tbody>
                     </table>
                 </div>
+                </div>
             </div>
             @endif
 
             {{-- Khusus Rentang: Tabel Harian di Bawah --}}
             @if($activeTab === 'rentang')
             <div class="bg-surface-dark border border-[#3E4C59] rounded-xl overflow-hidden">
-                <div class="bg-gray-900/60 px-5 py-3 border-b border-[#3E4C59]">
+                <div class="bg-gray-900/60 px-4 md:px-5 py-3 border-b border-[#3E4C59]">
                     <h3 class="text-white text-xs font-black uppercase tracking-widest">Detail Pendapatan Harian</h3>
                 </div>
-                <table class="w-full text-left text-sm">
+                <div class="overflow-x-auto">
+                <table class="w-full text-left text-sm min-w-[450px]">
                     <thead>
                         <tr class="bg-gray-900/40 text-[10px] text-slate-500 uppercase font-bold">
                             <th class="px-6 py-3">Tanggal</th>
@@ -631,6 +636,7 @@ class extends Component {
                         @endforeach
                     </tbody>
                 </table>
+                </div>
             </div>
             @endif
 
@@ -680,7 +686,7 @@ class extends Component {
                  x-init="$nextTick(() => initCharts())">
 
                 {{-- Summary Cards --}}
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
                     {{-- Member Transactions --}}
                     <div class="bg-surface-dark p-4 rounded-xl border border-[#3E4C59]">
                         <p class="text-slate-500 text-[10px] font-bold uppercase tracking-wider">Transaksi Member</p>

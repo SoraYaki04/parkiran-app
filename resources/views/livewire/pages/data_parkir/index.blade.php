@@ -110,13 +110,13 @@ class extends Component {
 <div class="flex-1 flex flex-col h-full overflow-hidden">
 
     {{-- HEADER --}}
-    <header class="px-8 py-6 border-b border-gray-800 flex-shrink-0">
-        <h2 class="text-white text-3xl font-black">Data Parkir</h2>
-        <p class="text-slate-400">Monitoring parkir berjalan & selesai</p>
+    <header class="px-4 md:px-8 py-4 md:py-6 border-b border-gray-800 flex-shrink-0">
+        <h2 class="text-white text-2xl md:text-3xl font-black">Data Parkir</h2>
+        <p class="text-slate-400 text-sm">Monitoring parkir berjalan & selesai</p>
     </header>
 
     {{-- ACTION BAR (TABS & FILTERS) --}}
-    <div class="px-8 pt-6 flex flex-col lg:flex-row lg:items-center justify-between gap-4 flex-shrink-0">
+    <div class="px-4 md:px-8 pt-4 md:pt-6 flex flex-col lg:flex-row lg:items-center justify-between gap-3 md:gap-4 flex-shrink-0">
         {{-- TABS --}}
         <div class="bg-surface-dark p-1.5 rounded-xl border border-[#3E4C59] inline-flex gap-1 h-fit">
             <button wire:click="setTab('berjalan')"
@@ -181,7 +181,7 @@ class extends Component {
     </div>
 
     {{-- CONTENT --}}
-    <div class="flex-1 flex flex-col px-8 py-6 overflow-hidden">
+    <div class="flex-1 flex flex-col px-4 md:px-8 py-4 md:py-6 overflow-hidden">
 
         {{-- PARKIR BERJALAN --}}
         @if($activeTab === 'berjalan')
@@ -189,7 +189,8 @@ class extends Component {
 
             {{-- TABLE WRAPPER --}}
             <div class="flex-1 overflow-y-auto scrollbar-hide">
-                <table class="w-full text-left">
+                <div class="overflow-x-auto">
+                <table class="w-full text-left min-w-[600px]">
                     <thead class="bg-gray-900/60 sticky top-0 z-10 border-b border-[#3E4C59]">
                         <tr>
                             <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Info Kendaraan</th>
@@ -228,6 +229,7 @@ class extends Component {
                         @endforelse
                     </tbody>
                 </table>
+                </div>
             </div>
 
         </div>
@@ -242,7 +244,8 @@ class extends Component {
         <div class="flex-1 flex flex-col bg-surface-dark border border-[#3E4C59] rounded-xl shadow-sm overflow-hidden">
 
             <div class="flex-1 overflow-y-auto scrollbar-hide">
-                <table class="w-full text-left">
+                <div class="overflow-x-auto">
+                <table class="w-full text-left min-w-[650px]">
                     <thead class="bg-gray-900/60 sticky top-0 z-10 border-b border-[#3E4C59]">
                         <tr>
                             <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Kendaraan</th>
@@ -282,6 +285,7 @@ class extends Component {
                         @endforelse
                     </tbody>
                 </table>
+                </div>
             </div>
 
             {{-- PAGINATION --}}

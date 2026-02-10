@@ -112,14 +112,14 @@ class extends Component {
 
 <div class="flex-1 flex flex-col h-full overflow-hidden">
     {{-- HEADER --}}
-    <header class="px-8 py-6 border-b border-gray-800 flex justify-between items-end flex-shrink-0">
+    <header class="px-4 md:px-8 py-4 md:py-6 border-b border-gray-800 flex flex-col sm:flex-row justify-between sm:items-end gap-3 flex-shrink-0">
         <div>
-            <h2 class="text-white text-3xl font-black">Database Backup</h2>
-            <p class="text-slate-400">Buat dan atur backup database</p>
+            <h2 class="text-white text-2xl md:text-3xl font-black">Database Backup</h2>
+            <p class="text-slate-400 text-sm">Buat dan atur backup database</p>
         </div>
 
         <button wire:click="createBackup" wire:loading.attr="disabled"
-                class="flex items-center gap-2 bg-primary text-black px-5 py-2.5 rounded-lg font-bold hover:bg-primary-400 transition disabled:opacity-50 disabled:cursor-not-allowed">
+                class="flex items-center gap-2 bg-primary text-black px-5 py-2.5 rounded-lg font-bold text-sm w-fit hover:bg-primary-400 transition disabled:opacity-50 disabled:cursor-not-allowed">
             <span wire:loading.remove wire:target="createBackup" class="material-symbols-outlined">backup</span>
             <span wire:loading wire:target="createBackup" class="material-symbols-outlined animate-spin">sync</span>
             <span wire:loading.remove wire:target="createBackup">Buat Backup</span>
@@ -128,8 +128,8 @@ class extends Component {
     </header>
 
     {{-- INFO BANNER --}}
-    <div class="px-8 pt-6">
-        <div class="bg-blue-500/10 border border-blue-500/30 rounded-xl p-4 flex items-start gap-3">
+    <div class="px-4 md:px-8 pt-4 md:pt-6">
+        <div class="bg-blue-500/10 border border-blue-500/30 rounded-xl p-3 md:p-4 flex items-start gap-3">
             <span class="material-symbols-outlined text-blue-400 shrink-0 mt-0.5">info</span>
             <div class="text-sm text-slate-300">
                 <p class="font-bold text-white">Backup & Restore</p>
@@ -139,32 +139,33 @@ class extends Component {
     </div>
 
     {{-- TABLE --}}
-    <div class="flex-1 overflow-y-auto px-8 py-6 scrollbar-hide">
+    <div class="flex-1 overflow-y-auto px-4 md:px-8 py-4 md:py-6 scrollbar-hide">
         <div class="bg-surface-dark border border-[#3E4C59] rounded-xl overflow-hidden">
-            <table class="w-full text-left">
+            <div class="overflow-x-auto">
+            <table class="w-full text-left min-w-[550px]">
                 <thead class="bg-gray-900 text-slate-400 text-xs uppercase">
                     <tr>
-                        <th class="px-6 py-4">Filename</th>
-                        <th class="px-6 py-4">Ukuran</th>
-                        <th class="px-6 py-4">Tanggal</th>
-                        <th class="px-6 py-4">Age</th>
-                        <th class="px-6 py-4 text-right">Aksi</th>
+                        <th class="px-4 md:px-6 py-3 md:py-4">Filename</th>
+                        <th class="px-4 md:px-6 py-3 md:py-4 hidden sm:table-cell">Ukuran</th>
+                        <th class="px-4 md:px-6 py-3 md:py-4">Tanggal</th>
+                        <th class="px-4 md:px-6 py-3 md:py-4 hidden sm:table-cell">Age</th>
+                        <th class="px-4 md:px-6 py-3 md:py-4 text-right">Aksi</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-[#3E4C59]">
                     @forelse($this->backups as $backup)
                         <tr class="hover:bg-surface-hover transition group">
-                            <td class="px-6 py-4">
-                                <div class="flex items-center gap-3">
+                            <td class="px-4 md:px-6 py-3 md:py-4">
+                                <div class="flex items-center gap-2 md:gap-3">
                                     <span class="material-symbols-outlined text-primary">archive</span>
-                                    <span class="font-medium text-white text-sm">{{ $backup['filename'] }}</span>
+                                    <span class="font-medium text-white text-xs md:text-sm truncate max-w-[150px] md:max-w-none">{{ $backup['filename'] }}</span>
                                 </div>
                             </td>
-                            <td class="px-6 py-4 text-slate-300 text-sm">{{ $backup['size'] }}</td>
-                            <td class="px-6 py-4 text-slate-300 text-sm">{{ $backup['date'] }}</td>
-                            <td class="px-6 py-4 text-slate-400 text-sm">{{ $backup['age'] }}</td>
-                            <td class="px-6 py-4 text-right">
-                                <div class="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition">
+                            <td class="px-4 md:px-6 py-3 md:py-4 text-slate-300 text-sm hidden sm:table-cell">{{ $backup['size'] }}</td>
+                            <td class="px-4 md:px-6 py-3 md:py-4 text-slate-300 text-sm">{{ $backup['date'] }}</td>
+                            <td class="px-4 md:px-6 py-3 md:py-4 text-slate-400 text-sm hidden sm:table-cell">{{ $backup['age'] }}</td>
+                            <td class="px-4 md:px-6 py-3 md:py-4 text-right">
+                                <div class="flex items-center justify-end gap-1 md:gap-2 md:opacity-0 md:group-hover:opacity-100 transition">
                                     <button wire:click="download('{{ $backup['filename'] }}')"
                                             class="p-2 text-slate-400 hover:text-blue-400 rounded-lg hover:bg-blue-500/10" title="Download">
                                         <span class="material-symbols-outlined text-[20px]">download</span>
@@ -194,6 +195,7 @@ class extends Component {
                     @endforelse
                 </tbody>
             </table>
+            </div>
         </div>
     </div>
 

@@ -368,7 +368,7 @@ public function finalizeExit()
 
     <div class="w-full h-full flex flex-col md:flex-row">
         
-        <div class="w-full md:w-4/12 flex flex-col border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6">
+        <div class="w-full md:w-4/12 flex flex-col border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 md:p-6">
             <div class="mb-8">
                 <h1 class="text-2xl font-bold text-slate-900 dark:text-white mb-1 border-l-4 border-primary-500 pl-3">Gerbang Keluar</h1>
                 <p class="text-slate-500 text-sm">Scan QR atau input plat manual</p>
@@ -461,10 +461,10 @@ public function finalizeExit()
                     <div class="max-w-2xl mx-auto w-full space-y-6">
                         
                         <div class="bg-white dark:bg-slate-900 rounded-[2rem] shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
-                            <div class="p-8 border-b border-slate-100 dark:border-slate-800 bg-gradient-to-r from-primary-50/50 to-transparent dark:from-primary-500/5">
+                            <div class="p-5 md:p-8 border-b border-slate-100 dark:border-slate-800 bg-gradient-to-r from-primary-50/50 to-transparent dark:from-primary-500/5">
                                 <div class="flex justify-between items-start">
                                     <div>
-                                        <h2 class="text-5xl font-black text-slate-900 dark:text-white tracking-tight">{{ $session->plat_nomor }}</h2>
+                                        <h2 class="text-3xl md:text-5xl font-black text-slate-900 dark:text-white tracking-tight">{{ $session->plat_nomor }}</h2>
                                         <p class="text-sm text-slate-500 font-bold uppercase mt-1">{{ $session->tipeKendaraan->nama_tipe ?? '-' }}</p>
                                     </div>
                                     <span
@@ -480,14 +480,14 @@ public function finalizeExit()
                             </div>
 
                             <div class="grid grid-cols-2 divide-x divide-slate-100 dark:divide-slate-800">
-                                <div class="p-8 text-center">
+                                <div class="p-5 md:p-8 text-center">
                                     <p class="text-slate-400 text-[10px] font-black uppercase mb-2 tracking-widest">
                                         Total Tagihan
                                     </p>
 
                                     <div class="flex items-baseline justify-center gap-1">
-                                        <span class="text-xl font-bold text-primary-600">Rp</span>
-                                        <span class="text-5xl font-black text-primary-600 tracking-tighter">
+                                        <span class="text-lg md:text-xl font-bold text-primary-600">Rp</span>
+                                        <span class="text-3xl md:text-5xl font-black text-primary-600 tracking-tighter">
                                             {{ number_format($totalBayarFinal ?? 0, 0, ',', '.') }}
                                         </span>
                                     </div>
@@ -502,7 +502,7 @@ public function finalizeExit()
                                         </div>
                                     @endif
                                 </div>
-                                <div class="p-8 space-y-3">
+                                <div class="p-5 md:p-8 space-y-3">
                                     <div class="flex justify-between text-xs">
                                         <span class="text-slate-400 font-bold uppercase">Durasi</span>
                                         <span class="font-black dark:text-white text-slate-700">{{ $durasiHari > 0 ? $durasiHari.'d' : '' }} {{ $durasiJam }}j {{ $durasiMenit }}m</span>
@@ -539,7 +539,7 @@ public function finalizeExit()
                     </div>
                 </div>
 
-                <div class="flex-shrink-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 p-6 lg:p-8 shadow-[0_-20px_50px_-15px_rgba(0,0,0,0.1)] z-10">
+                <div class="flex-shrink-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 p-4 md:p-6 lg:p-8 shadow-[0_-20px_50px_-15px_rgba(0,0,0,0.1)] z-10">
                     <div class="max-w-5xl mx-auto flex flex-col lg:flex-row items-center justify-between gap-6">
                         
                         <div class="w-full lg:w-auto space-y-3">

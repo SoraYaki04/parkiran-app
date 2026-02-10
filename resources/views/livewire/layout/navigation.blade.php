@@ -29,7 +29,7 @@ new class extends Component
 };
 ?>
 
-<aside class="w-64 bg-sidebar-dark border-r border-gray-800 flex flex-col shrink-0">
+<aside class="w-64 h-full bg-sidebar-dark border-r border-gray-800 flex flex-col shrink-0 shadow-2xl md:shadow-none">
 
     {{-- LOGO --}}
     <div class="p-6 flex items-center gap-3">
@@ -59,6 +59,7 @@ new class extends Component
         x-ref="nav"
         @scroll.debounce.100ms="sessionStorage.setItem('sidebarScroll', $refs.nav.scrollTop)"
         x-init="if (sessionStorage.getItem('sidebarScroll')) { $refs.nav.scrollTop = sessionStorage.getItem('sidebarScroll') }"
+        @click="if ($event.target.closest('a') && window.innerWidth < 768) { $dispatch('close-sidebar') }"
         class="flex-1 px-4 py-4 flex flex-col gap-2 overflow-y-auto scrollbar-hide"
     >
 

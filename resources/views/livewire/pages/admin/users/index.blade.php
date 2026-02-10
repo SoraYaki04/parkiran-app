@@ -343,27 +343,27 @@ class extends Component {
 
 
     {{-- HEADER --}}
-    <header class="px-8 py-6 border-b border-gray-800 flex justify-between items-end">
+    <header class="px-4 md:px-8 py-4 md:py-6 border-b border-gray-800 flex flex-col sm:flex-row justify-between sm:items-end gap-3">
         <div>
-            <h2 class="text-white text-3xl font-black">Manajemen User</h2>
-            <p class="text-slate-400">Buat dan Atur User</p>
+            <h2 class="text-white text-2xl md:text-3xl font-black">Manajemen User</h2>
+            <p class="text-slate-400 text-sm">Buat dan Atur User</p>
         </div>
 
         <button wire:click="create"
-                class="flex items-center gap-2 bg-primary text-black px-5 py-2.5 rounded-lg font-bold">
+                class="flex items-center gap-2 bg-primary text-black px-5 py-2.5 rounded-lg font-bold text-sm w-fit">
             <span class="material-symbols-outlined">add</span>
             Tambah User
         </button>
     </header>
 
     {{-- USER LOGIN HIGHLIGHT --}}
-    <div class="px-8 pt-6">
+    <div class="px-4 md:px-8 pt-4 md:pt-6">
         @php
             $currentUser = auth()->user();
             [$label, $class] = $currentUser->role_badge;
         @endphp
 
-        <div class="border border-[#3E4C59] rounded-xl p-5 flex items-center justify-between">
+        <div class="border border-[#3E4C59] rounded-xl p-4 md:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div>
                 <p class="text-slate-400 text-xs">Anda sedang login sebagai:</p>
                 <h3 class="text-white font-bold text-lg">{{ $currentUser->name }}</h3>
@@ -373,8 +373,6 @@ class extends Component {
                 <span class="px-3 py-1 text-xs rounded-full {{ $class }}">
                     {{ $label }}
                 </span>
-
-                {{-- Tombol edit aktif --}}
                 <button wire:click="edit({{ $currentUser->id }})" class="text-primary p-2">
                     <span class="material-symbols-outlined">edit</span>
                 </button>
@@ -384,9 +382,9 @@ class extends Component {
 
 
     {{-- FILTER --}}
-    <div class="px-8 pt-6">
-        <div class="bg-surface-dark p-5 rounded-xl border border-[#3E4C59]">
-            <div class="flex flex-col md:flex-row gap-4">
+    <div class="px-4 md:px-8 pt-4 md:pt-6">
+        <div class="bg-surface-dark p-4 md:p-5 rounded-xl border border-[#3E4C59]">
+            <div class="flex flex-col md:flex-row gap-3 md:gap-4">
 
                 <input wire:model.live="search"
                        class="flex-1 bg-gray-900 border border-[#3E4C59] rounded-lg px-4 py-2 text-white"
@@ -405,26 +403,27 @@ class extends Component {
     </div>
 
     {{-- TABLE --}}
-    <div class="flex-1 overflow-y-auto px-8 py-6 scrollbar-hide">
+    <div class="flex-1 overflow-y-auto px-4 md:px-8 py-4 md:py-6 scrollbar-hide">
         <div class="bg-surface-dark border border-[#3E4C59] rounded-xl overflow-hidden">
-            <table class="w-full">
+            <div class="overflow-x-auto">
+            <table class="w-full min-w-[600px]">
                 <thead class="bg-gray-900">
                     <tr>
-                        <th class="px-6 py-4 text-left text-slate-400 text-xs">Nama</th>
-                        <th class="px-6 py-4 text-left text-slate-400 text-xs">Username</th>
-                        <th class="px-6 py-4 text-center text-slate-400 text-xs">Status</th>
-                        <th class="px-6 py-4 text-center text-slate-400 text-xs">Role</th>
-                        <th class="px-6 py-4 text-center text-slate-400 text-xs">Aksi</th>
+                        <th class="px-4 md:px-6 py-3 md:py-4 text-left text-slate-400 text-xs">Nama</th>
+                        <th class="px-4 md:px-6 py-3 md:py-4 text-left text-slate-400 text-xs">Username</th>
+                        <th class="px-4 md:px-6 py-3 md:py-4 text-center text-slate-400 text-xs">Status</th>
+                        <th class="px-4 md:px-6 py-3 md:py-4 text-center text-slate-400 text-xs">Role</th>
+                        <th class="px-4 md:px-6 py-3 md:py-4 text-center text-slate-400 text-xs">Aksi</th>
                     </tr>
                 </thead>
 
                 <tbody class="divide-y divide-[#3E4C59]">
                     @forelse($this->users as $user)
                         <tr class="hover:bg-surface-hover">
-                            <td class="px-6 py-4 text-white">{{ $user->name }}</td>
-                            <td class="px-6 py-4 text-white">{{ $user->username }}</td>
-                            <td class="px-6 py-4 text-center text-slate-300">{{ ucfirst($user->status) }}</td>
-                            <td class="px-6 py-4 text-center">
+                            <td class="px-4 md:px-6 py-3 md:py-4 text-white">{{ $user->name }}</td>
+                            <td class="px-4 md:px-6 py-3 md:py-4 text-white">{{ $user->username }}</td>
+                            <td class="px-4 md:px-6 py-3 md:py-4 text-center text-slate-300">{{ ucfirst($user->status) }}</td>
+                            <td class="px-4 md:px-6 py-3 md:py-4 text-center">
 
                             @php([$label, $class] = $user->role_badge)
 
@@ -433,7 +432,7 @@ class extends Component {
                             </span>
                             
                             </td>
-                            <td class="px-6 py-4 text-center">
+                            <td class="px-4 md:px-6 py-3 md:py-4 text-center">
                                 <button wire:click="edit({{ $user->id }})" class="text-primary p-2">
                                     <span class="material-symbols-outlined">edit</span>
                                 </button>
@@ -458,6 +457,7 @@ class extends Component {
                 </tbody>
                 
             </table>
+            </div>
         </div>
     </div>
     <div class="mt-6">
@@ -467,10 +467,10 @@ class extends Component {
     {{-- MODAL --}}
     <div x-show="open"
          x-transition
-         class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+         class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
         
         <div @click.away="$wire.closeModal(); open=false"
-            class="bg-card-dark w-full max-w-md p-6 rounded-xl">
+            class="bg-card-dark w-full max-w-md p-5 md:p-6 rounded-xl max-h-[90vh] overflow-y-auto">
             <h3 class="text-white font-bold mb-4">
                 {{ $isEdit ? 'Edit User' : 'Tambah User' }}
             </h3>

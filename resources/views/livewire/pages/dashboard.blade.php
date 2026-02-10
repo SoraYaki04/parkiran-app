@@ -86,22 +86,22 @@ class extends Component
 
  <div class="flex-1 flex flex-col h-full overflow-hidden bg-gray-900 text-gray-200" wire:poll.10s>
     {{-- HEADER --}}
-    <header class="px-8 py-6 border-b border-gray-800 flex justify-between items-end bg-gray-900 backdrop-blur-xl sticky top-0 z-30">
+    <header class="px-4 md:px-8 py-4 md:py-6 border-b border-gray-800 flex flex-col sm:flex-row justify-between sm:items-end gap-3 bg-gray-900 backdrop-blur-xl sticky top-0 z-30">
         <div>
-            <h2 class="text-white text-3xl font-black">
+            <h2 class="text-white text-2xl md:text-3xl font-black">
                Dashboard
             </h2>
-            <p class="text-slate-400">
+            <p class="text-slate-400 text-sm md:text-base">
                 Ringkasan data dan kontrol sistem kendaraaan
             </p>
         </div>
-        <div class="text-right">
-            <div class="flex items-center justify-end gap-3">
+        <div class="text-left sm:text-right">
+            <div class="flex items-center sm:justify-end gap-3">
                 <span class="relative flex h-3 w-3">
                     <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
                     <span class="relative inline-flex rounded-full h-3 w-3 bg-primary shadow-[0_0_12px_#facc14]"></span>
                 </span>
-                <h1 class="text-white text-4xl font-black tracking-tighter tabular-nums">
+                <h1 class="text-white text-3xl md:text-4xl font-black tracking-tighter tabular-nums">
                     {{ now()->format('H:i') }}
                 </h1>
             </div>
@@ -112,33 +112,33 @@ class extends Component
 
     </header>
 
-    <div class="flex-1 overflow-y-auto p-8 space-y-10 scrollbar-hide">
+    <div class="flex-1 overflow-y-auto p-4 md:p-8 space-y-6 md:space-y-10 scrollbar-hide">
             
             {{-- TOP STATS --}}
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
                 {{-- REVENUE CARD --}}
-                <div class="lg:col-span-4 bg-primary p-8 rounded-[2rem] shadow-[0_20px_50px_rgba(250,204,20,0.15)] relative overflow-hidden group">
+                <div class="lg:col-span-4 bg-primary p-5 md:p-8 rounded-2xl md:rounded-[2rem] shadow-[0_20px_50px_rgba(250,204,20,0.15)] relative overflow-hidden group">
                     <div class="relative z-10">
                         <p class="text-gray-950 text-[10px] font-black uppercase tracking-[0.2em] opacity-60">Pendapatan Hari Ini</p>
-                        <h3 class="text-5xl font-black text-gray-950 mt-2 tracking-tighter italic">
-                            <span class="text-2xl font-bold mr-1">Rp</span>{{ number_format($this->todayRevenue,0,',','.') }}
+                        <h3 class="text-3xl md:text-5xl font-black text-gray-950 mt-2 tracking-tighter italic">
+                            <span class="text-xl md:text-2xl font-bold mr-1">Rp</span>{{ number_format($this->todayRevenue,0,',','.') }}
                         </h3>
                     </div>
-                    <span class="material-symbols-outlined absolute -right-8 -bottom-8 text-[180px] text-black/5 group-hover:rotate-12 transition-transform duration-700">monetization_on</span>
+                    <span class="material-symbols-outlined absolute -right-8 -bottom-8 text-[120px] md:text-[180px] text-black/5 group-hover:rotate-12 transition-transform duration-700">monetization_on</span>
                 </div>
 
                 {{-- VEHICLE TYPE STATS --}}
-                <div class="lg:col-span-8 grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div class="lg:col-span-8 grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
                     @foreach($this->occupancy as $o)
-                    <div class="bg-gray-900 border border-gray-800 p-7 rounded-[2rem] flex items-center justify-between hover:border-primary/50 transition-all group shadow-xl">
+                    <div class="bg-gray-900 border border-gray-800 p-4 md:p-7 rounded-2xl md:rounded-[2rem] flex items-center justify-between hover:border-primary/50 transition-all group shadow-xl">
                         <div>
                             <p class="text-gray-500 text-[10px] uppercase font-black tracking-widest group-hover:text-primary transition-colors">{{ $o['nama_tipe'] }} Kapasitas</p>
-                            <h4 class="text-4xl font-black text-white mt-2 tracking-tighter">
-                                {{ $o['used_slot'] }} <span class="text-gray-700 text-xl font-bold italic">/ {{ $o['total_slot'] }}</span>
+                            <h4 class="text-2xl md:text-4xl font-black text-white mt-2 tracking-tighter">
+                                {{ $o['used_slot'] }} <span class="text-gray-700 text-lg md:text-xl font-bold italic">/ {{ $o['total_slot'] }}</span>
                             </h4>
                         </div>
-                        <div class="size-16 rounded-2xl bg-gray-800 flex items-center justify-center group-hover:bg-primary transition-all duration-500 shadow-lg border border-gray-700">
-                             <span class="material-symbols-outlined text-4xl text-primary group-hover:text-gray-950 transition-colors">
+                        <div class="size-12 md:size-16 rounded-xl md:rounded-2xl bg-gray-800 flex items-center justify-center group-hover:bg-primary transition-all duration-500 shadow-lg border border-gray-700">
+                             <span class="material-symbols-outlined text-3xl md:text-4xl text-primary group-hover:text-gray-950 transition-colors">
                                 transportation
                              </span>
                         </div>
@@ -193,27 +193,28 @@ class extends Component
                     </div>
                 </div>
 
-                <div class="bg-gray-900 border border-gray-800 rounded-[2rem] overflow-hidden shadow-2xl">
-                    <table class="w-full text-left">
+                <div class="bg-gray-900 border border-gray-800 rounded-2xl md:rounded-[2rem] overflow-hidden shadow-2xl">
+                    <div class="overflow-x-auto">
+                    <table class="w-full text-left min-w-[600px]">
                         <thead class="bg-gray-950/80 border-b border-gray-800">
                             <tr class="text-gray-500 text-[10px] uppercase font-black tracking-[0.2em]">
-                                <th class="px-8 py-6">Plat Nomor</th>
-                                <th class="px-8 py-6">Tipe Kendaraan</th>
-                                <th class="px-8 py-6">Lokasi</th>
-                                <th class="px-8 py-6">Waktu Masuk</th>
-                                <th class="px-8 py-6 text-center">Status</th>
+                                <th class="px-4 md:px-8 py-4 md:py-6">Plat Nomor</th>
+                                <th class="px-4 md:px-8 py-4 md:py-6">Tipe</th>
+                                <th class="px-4 md:px-8 py-4 md:py-6 hidden sm:table-cell">Lokasi</th>
+                                <th class="px-4 md:px-8 py-4 md:py-6">Waktu</th>
+                                <th class="px-4 md:px-8 py-4 md:py-6 text-center">Status</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-800/50">
                             @foreach($this->recentMovements as $session)
                             <tr class="hover:bg-primary/5 transition-colors group">
-                                <td class="px-8 py-5">
-                                    <span class="px-4 py-2 bg-gray-800 text-primary rounded-xl font-mono font-black text-sm border border-gray-700 group-hover:border-primary/50 transition-all shadow-md">
+                                <td class="px-4 md:px-8 py-4 md:py-5">
+                                    <span class="px-3 md:px-4 py-1.5 md:py-2 bg-gray-800 text-primary rounded-lg md:rounded-xl font-mono font-black text-xs md:text-sm border border-gray-700 group-hover:border-primary/50 transition-all shadow-md">
                                         {{ $session->plat_nomor }}
                                     </span>
                                 </td>
-                                <td class="px-8 py-5 text-gray-300 text-xs font-black uppercase tracking-widest">{{ $session->tipeKendaraan->nama_tipe }}</td>
-                                <td class="px-8 py-5">
+                                <td class="px-4 md:px-8 py-4 md:py-5 text-gray-300 text-xs font-black uppercase tracking-widest">{{ $session->tipeKendaraan->nama_tipe }}</td>
+                                <td class="px-4 md:px-8 py-4 md:py-5 hidden sm:table-cell">
                                     <div class="flex flex-col">
                                         <span class="text-white font-black text-xs uppercase">{{ $session->slot->area->nama_area ?? '-' }}</span>
                                         <span class="text-[9px] text-primary font-black uppercase tracking-widest italic opacity-70">
@@ -221,10 +222,10 @@ class extends Component
                                         </span>
                                     </div>
                                 </td>
-                                <td class="px-8 py-5 text-gray-400 text-xs font-black tracking-widest">{{ $session->created_at->format('H:i:s') }}</td>
-                                <td class="px-8 py-5 text-center">
+                                <td class="px-4 md:px-8 py-4 md:py-5 text-gray-400 text-xs font-black tracking-widest">{{ $session->created_at->format('H:i:s') }}</td>
+                                <td class="px-4 md:px-8 py-4 md:py-5 text-center">
                                     @if($session->status == 'IN_PROGRESS')
-                                        <span class="inline-flex items-center gap-2 px-4 py-1.5 rounded-lg bg-primary/10 border border-primary/20 text-primary text-[9px] font-black uppercase tracking-[0.15em]">
+                                        <span class="inline-flex items-center gap-1.5 md:gap-2 px-3 md:px-4 py-1.5 rounded-lg bg-primary/10 border border-primary/20 text-primary text-[9px] font-black uppercase tracking-[0.15em]">
                                             <span class="size-1.5 bg-primary rounded-full animate-ping"></span> 
                                             In Parking
                                         </span>
@@ -236,6 +237,7 @@ class extends Component
                             @endforeach
                         </tbody>
                     </table>
+                    </div>
                 </div>
             </div>
 
