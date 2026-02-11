@@ -25,6 +25,21 @@ class extends Component {
         }
     }
 
+    public $userAgentModal = false;
+    public $selectedUserAgent = '';
+
+    public function showUserAgent($userAgent)
+    {
+        $this->selectedUserAgent = $userAgent;
+        $this->userAgentModal = true;
+    }
+
+    public function closeUserAgentModal()
+    {
+        $this->userAgentModal = false;
+        $this->selectedUserAgent = '';
+    }
+
     public function roleBadge($roleId): array
     {
         return match ((int) $roleId) {
@@ -228,6 +243,13 @@ class extends Component {
                             <span class="text-[10px] text-slate-600">-</span>
                         @endif
 
+                        @if($log->user_agent)
+                             <button wire:click="showUserAgent('{{ $log->user_agent }}')" 
+                                 class="ml-2 text-[10px] text-primary hover:underline font-bold tracking-tighter uppercase relative z-10">
+                                 UA
+                             </button>
+                        @endif
+
                         @if($hasChanges)
                             <button @click="expanded = !expanded"
                                 class="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider transition-all px-2 py-1 rounded-lg"
@@ -272,6 +294,20 @@ class extends Component {
                                         <span class="text-emerald-300 font-mono text-right truncate">{{ is_array($value) ? json_encode($value) : $value }}</span>
                                     </div>
                                 @endforeach
+                            </div>
+                        </div>
+                        @endif
+
+                        @if($log->user_agent)
+                        <div>
+                            <p class="text-[10px] font-black uppercase tracking-widest text-blue-400 mb-1.5 flex items-center gap-1">
+                                <span class="material-symbols-outlined text-[14px]">devices</span>
+                                User Agent
+                            </p>
+                            <div class="bg-blue-500/5 border border-blue-500/20 rounded-lg p-2.5">
+                                <p class="text-[11px] text-blue-300 font-mono break-all leading-relaxed">
+                                    {{ $log->user_agent }}
+                                </p>
                             </div>
                         </div>
                         @endif
@@ -400,6 +436,12 @@ class extends Component {
                                     <span class="text-[11px] text-slate-400 font-mono bg-gray-900/50 px-2 py-1 rounded border border-[#3E4C59]">
                                         {{ $log->ip_address }}
                                     </span>
+                                    @if($log->user_agent)
+                                        <button wire:click="showUserAgent('{{ $log->user_agent }}')" 
+                                            class="ml-2 text-[10px] text-primary hover:text-white transition-colors">
+                                            <span class="material-symbols-outlined text-[16px] align-middle">devices</span>
+                                        </button>
+                                    @endif
                                 @else
                                     <span class="text-slate-600 text-xs">-</span>
                                 @endif
@@ -457,6 +499,20 @@ class extends Component {
                                         </div>
                                     </div>
                                     @endif
+
+                                    @if($log->user_agent)
+                                    <div class="col-span-2">
+                                        <p class="text-[10px] font-black uppercase tracking-widest text-blue-400 mb-2 flex items-center gap-1">
+                                            <span class="material-symbols-outlined text-[14px]">devices</span>
+                                            User Agent
+                                        </p>
+                                        <div class="bg-blue-500/5 border border-blue-500/20 rounded-lg p-3">
+                                            <p class="text-xs text-blue-300 font-mono break-all leading-relaxed">
+                                                {{ $log->user_agent }}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    @endif
                                 </div>
                             </td>
                         </tr>
@@ -486,4 +542,41 @@ class extends Component {
         </div>
 
     </div>
+    </div>
+
+    {{-- USER AGENT MODAL --}}
+    @if($userAgentModal)
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+        <div class="bg-[#1e293b] w-full max-w-lg rounded-2xl border border-slate-700 shadow-2xl overflow-hidden" 
+             @click.away="$wire.closeUserAgentModal()">
+            
+            <div class="px-6 py-4 border-b border-slate-700 flex items-center justify-between">
+                <h3 class="text-white font-bold text-lg flex items-center gap-2">
+                    <span class="material-symbols-outlined text-primary">devices</span>
+                    User Agent Detail
+                </h3>
+                <button wire:click="closeUserAgentModal" class="text-slate-400 hover:text-white transition-colors">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            
+            <div class="p-6">
+                <div class="bg-slate-900/50 p-4 rounded-xl border border-slate-700/50 font-mono text-sm text-slate-300 break-all leading-relaxed">
+                    {{ $this->selectedUserAgent }}
+                </div>
+                
+                <p class="mt-4 text-[11px] text-slate-500 italic text-center">
+                    Informasi perangkat dan browser yang digunakan saat aktivitas tercatat.
+                </p>
+            </div>
+
+            <div class="px-6 py-4 bg-slate-800/50 border-t border-slate-700 flex justify-end">
+                <button wire:click="closeUserAgentModal" 
+                        class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white text-sm font-bold rounded-lg transition-colors">
+                    Tutup
+                </button>
+            </div>
+        </div>
+    </div>
+    @endif
 </div>

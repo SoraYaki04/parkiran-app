@@ -76,25 +76,28 @@ new class extends Component
         </a>
 
         {{-- TRANSAKSI (ADMIN & PETUGAS) --}}
-        @if(in_array(auth()->user()->role_id, [2]))
-            <a href="{{ route('exit') }}" wire:navigate.preserve-scroll
+        {{-- TRANSAKSI (PETUGAS ONLY) --}}
+        @if(auth()->user()->role_id == 2)
+            <a href="{{ route('petugas.exit') }}" wire:navigate.preserve-scroll
                class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all
-               {{ request()->routeIs('exit')
+               {{ request()->routeIs('petugas.exit')
                     ? 'bg-primary/10 border-l-4 border-primary text-white'
                     : 'text-gray-400 hover:bg-gray-800 hover:text-white' }}">
                 <span class="material-symbols-outlined">garage_check</span>
                 Transaksi
             </a>
-            
-            <a href="{{ route('data_parkir') }}" wire:navigate.preserve-scroll
+        @endif
+
+        {{-- DATA PARKIR (ADMIN & PETUGAS) --}}
+        @if(in_array(auth()->user()->role_id, [1, 2]))
+            <a href="{{ route('admin.data_parkir') }}" wire:navigate.preserve-scroll
                class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all
-               {{ request()->routeIs('data_parkir')
+               {{ request()->routeIs('admin.data_parkir')
                     ? 'bg-primary/10 border-l-4 border-primary text-white'
                     : 'text-gray-400 hover:bg-gray-800 hover:text-white' }}">
                 <span class="material-symbols-outlined">check_in_out</span>
                 Data Parkir
             </a>
-
         @endif
 
         {{-- ================= DATA MASTER (ADMIN & PETUGAS) ================= --}}

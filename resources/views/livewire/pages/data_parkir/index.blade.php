@@ -18,6 +18,7 @@ class extends Component {
     public ?string $hari = null; 
     public ?int $bulan = null;
     public ?int $tahun = null;
+    public string $search = '';
 
     public string $activeTab = 'berjalan';
 
@@ -30,7 +31,7 @@ class extends Component {
 
     public function updated($property)
     {
-        if (in_array($property, ['areaId', 'hari', 'bulan', 'tahun'])) {
+        if (in_array($property, ['areaId', 'hari', 'bulan', 'tahun', 'search'])) {
             $this->resetPage();
         }
     }
@@ -60,6 +61,9 @@ class extends Component {
                     $q2->where('area_id', $this->areaId)
                 );
             })
+            ->when($this->search, fn ($q) => 
+                $q->where('plat_nomor', 'like', '%' . $this->search . '%')
+            )
             ->when($this->hari, fn ($q) =>
                 $q->whereDate('generated_at', $this->hari)
             )
@@ -89,6 +93,11 @@ class extends Component {
             ->when($this->areaId, function ($q) {
                 $q->whereHas('slotParkir', fn ($q2) =>
                     $q2->where('area_id', $this->areaId)
+                );
+            })
+            ->when($this->search, function ($q) {
+                $q->whereHas('kendaraan', fn ($k) => 
+                    $k->where('plat_nomor', 'like', '%' . $this->search . '%')
                 );
             })
             ->when($this->hari, fn ($q) =>
@@ -133,6 +142,14 @@ class extends Component {
 
         {{-- FILTERS --}}
         <div class="flex flex-wrap items-center gap-3 bg-surface-dark/50 p-2 rounded-xl border border-[#3E4C59]/50">
+            {{-- SEARCH --}}
+            <div class="flex items-center gap-2 px-2 border-r border-[#3E4C59]">
+                 <span class="material-symbols-outlined text-gray-500 text-[18px]">search</span>
+                <input type="text" wire:model.live.debounce.300ms="search" placeholder="PLAT NOMOR"
+                    oninput="formatPlatDash(this)" maxlength="13"
+                    class="bg-transparent border-none text-white text-xs font-semibold focus:ring-0 w-[140px] placeholder-gray-600 uppercase">
+            </div>
+
             {{-- AREA --}}
             <div class="flex items-center gap-2 px-2 border-r border-[#3E4C59]">
                 <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Area</span>
@@ -203,7 +220,9 @@ class extends Component {
                         @forelse($this->parkirBerjalan as $item)
                         <tr class="hover:bg-surface-hover transition-colors">
                             <td class="px-6 py-4">
-                                <div class="text-white font-bold text-base uppercase">{{ $item->plat_nomor ?? 'No Plate' }}</div>
+                                <div class="text-white font-bold text-base uppercase">
+                                    {{ preg_replace('/^([A-Z]{1,2})(\d{1,4})([A-Z]{0,3})$/', '$1 $2 $3', preg_replace('/[^A-Z0-9]/', '', $item->plat_nomor)) ?? 'No Plate' }}
+                                </div>
                                 <div class="text-slate-500 text-xs mt-0.5">{{ $item->tipeKendaraan->nama_tipe ?? '-' }} • {{ $item->token }}</div>
                             </td>
                             <td class="px-6 py-4 text-center">
@@ -258,7 +277,9 @@ class extends Component {
                         @forelse($this->parkirSelesai as $item)
                         <tr class="hover:bg-surface-hover transition-colors">
                             <td class="px-6 py-4">
-                                <div class="text-white font-bold text-base uppercase leading-tight">{{ $item->kendaraan->plat_nomor ?? '-' }}</div>
+                                <div class="text-white font-bold text-base uppercase leading-tight">
+                                    {{ preg_replace('/^([A-Z]{1,2})(\d{1,4})([A-Z]{0,3})$/', '$1 $2 $3', preg_replace('/[^A-Z0-9]/', '', $item->kendaraan->plat_nomor ?? '')) ?: '-' }}
+                                </div>
                                 <div class="text-slate-500 text-[11px] mt-1">{{ $item->kode_karcis }} • {{ $item->tipeKendaraan->nama_tipe ?? '-' }}</div>
                             </td>
                             <td class="px-6 py-4">
@@ -297,3 +318,52 @@ class extends Component {
 
     </div>
 </div>
+
+@push('scripts')
+<script>
+    function formatPlatDash(el) {
+        let value = el.value.toUpperCase();
+
+        // hapus semua karakter selain huruf dan angka
+        value = value.replace(/[^A-Z0-9]/g, '');
+
+        let depan = '';
+        let nomor = '';
+        let belakang = '';
+
+        let i = 0;
+
+        // Bagian depan: huruf 1-2
+        while(i < value.length && depan.length < 2 && /[A-Z]/.test(value[i])) {
+            depan += value[i];
+            i++;
+        }
+
+        // Bagian tengah: angka 1-4 → hanya jika huruf depan ada
+        if(depan.length > 0) {
+            while(i < value.length && nomor.length < 4 && /[0-9]/.test(value[i])) {
+                nomor += value[i];
+                i++;
+            }
+        }
+
+        // Bagian belakang: huruf 0-3 → hanya jika angka tengah ada
+        if(nomor.length > 0) {
+            while(i < value.length && belakang.length < 3 && /[A-Z]/.test(value[i])) {
+                belakang += value[i];
+                i++;
+            }
+        }
+
+        // gabungkan dengan spasi
+        let hasil = depan;
+        if(nomor) hasil += ' ' + nomor;
+        if(belakang) hasil += ' ' + belakang;
+
+        if (el.value !== hasil) {
+            el.value = hasil;
+            el.dispatchEvent(new Event('input'));
+        }
+    }
+</script>
+@endpush

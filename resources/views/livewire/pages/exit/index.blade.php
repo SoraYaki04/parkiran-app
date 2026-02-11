@@ -409,7 +409,7 @@ public function finalizeExit()
 
                     {{-- TOMBOL SELENGKAPNYA --}}
                     <a
-                        href="{{ route('data_parkir', ['tab' => 'selesai']) }}" wire:navigate
+                        href="{{ route('admin.data_parkir', ['tab' => 'selesai']) }}" wire:navigate
                         class="text-[10px] font-black uppercase tracking-widest
                             text-primary-500 hover:text-primary-600 transition"
                     >

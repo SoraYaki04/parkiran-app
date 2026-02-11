@@ -278,81 +278,45 @@ class extends Component {
     =======================*/
 
     // Revenue per day for last 7 days + Forecast (Linear Regression)
+    // Revenue chart based on selected month/year
     public function getRevenueChartDataProperty()
     {
         $labels = [];
         $actualData = [];
-        $forecastData = [];
         
-        // 1. Get Actual Data (Last 7 Days)
-        $points = []; // [x, y] for regression
-        for ($i = 6; $i >= 0; $i--) {
-            $date = Carbon::today()->subDays($i);
-            $labels[] = $date->translatedFormat('d M');
-            $revenue = Pembayaran::whereDate('tanggal_bayar', $date)->sum('total_bayar');
-            $actualData[] = $revenue;
-            $points[] = ['x' => 6 - $i, 'y' => $revenue]; // x: 0 to 6
-        }
-
-        // 2. Linear Regression (y = mx + b)
-        $n = count($points);
-        if ($n > 1) {
-            $sumX = 0; $sumY = 0; $sumXY = 0; $sumXX = 0;
-            foreach ($points as $p) {
-                $sumX += $p['x'];
-                $sumY += $p['y'];
-                $sumXY += ($p['x'] * $p['y']);
-                $sumXX += ($p['x'] * $p['x']);
-            }
+        // 1. Determine range based on filters
+        $start = Carbon::createFromDate($this->filterYear, $this->filterMonth, 1)->startOfMonth();
+        $end = $start->copy()->endOfMonth();
+        
+        // 2. Loop through each day of the selected month
+        $current = $start->copy();
+        while ($current <= $end) {
+            $labels[] = $current->format('d'); // Just the day number
             
-            $slope = ($n * $sumXY - $sumX * $sumY) / ($n * $sumXX - $sumX * $sumX);
-            $intercept = ($sumY - $slope * $sumX) / $n;
-
-            // 3. Project Next 7 Days
-            for ($i = 1; $i <= 7; $i++) {
-                $futureDate = Carbon::today()->addDays($i);
-                $labels[] = $futureDate->translatedFormat('d M') . ' (Prediksi)';
-                
-                // Keep actual data null for future points
+            // Only add data up to today if viewing current month
+            if ($current > now()) {
                 $actualData[] = null;
-
-                // Calculate forecast
-                $x = 6 + $i; // Continue x sequence
-                $y = max(0, $slope * $x + $intercept); // No negative revenue
-                $forecastData[] = round($y);
+            } else {
+                $revenue = Pembayaran::whereDate('tanggal_bayar', $current)->sum('total_bayar');
+                $actualData[] = $revenue;
             }
             
-            // Fill previous forecast data with nulls to align
-            $forecastData = array_merge(array_fill(0, 7, null), $forecastData);
-             // Add the last actual point to forecast to connect lines
-             $forecastData[6] = $actualData[6];
-
-        } else {
-             // Fallback if not enough data
-             $forecastData = [];
+            $current->addDay();
         }
 
         return [
             'labels' => $labels,
             'datasets' => [
                 [
-                    'label' => 'Pendapatan Aktual',
+                    'label' => 'Pendapatan Harian',
                     'data' => $actualData,
                     'borderColor' => '#10B981', // Emerald 500
                     'backgroundColor' => 'rgba(16, 185, 129, 0.1)',
                     'fill' => true,
                     'tension' => 0.4
-                ],
-                [
-                    'label' => 'Forecast (Linear Trend)',
-                    'data' => $forecastData,
-                    'borderColor' => '#F59E0B', // Amber 500
-                    'borderDash' => [5, 5],
-                    'fill' => false,
-                    'tension' => 0.4
                 ]
             ],
-            'trend_desc' => $n > 1 ? ($slope > 0 ? "Tren Positif (+)" : "Tren Negatif (-)") . " Rata-rata pertumbuhan harian: Rp " . number_format($slope, 0, ',', '.') : "Data tidak cukup"
+            'trend_desc' => "Data pendapatan bulan " . $start->translatedFormat('F Y')
         ];
     }
 
@@ -671,7 +635,7 @@ class extends Component {
                     <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Bulan</span>
                     <select wire:model.live="filterMonth" class="bg-transparent border-none text-white text-xs font-semibold focus:ring-1 focus:ring-primary cursor-pointer w-24">
                         @for($m=1; $m<=12; $m++)
-                            <option value="{{ $m }}">{{ \Carbon\Carbon::create()->month($m)->translatedFormat('F') }}</option>
+                            <option class="bg-gray-900 text-white" value="{{ $m }}">{{ \Carbon\Carbon::create()->month($m)->translatedFormat('F') }}</option>
                         @endfor
                     </select>
                 </div>
@@ -679,7 +643,7 @@ class extends Component {
                     <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Tahun</span>
                     <select wire:model.live="filterYear" class="bg-transparent border-none text-white text-xs font-semibold focus:ring-1 focus:ring-primary cursor-pointer w-20">
                         @for($y=date('Y'); $y>=2020; $y--)
-                            <option value="{{ $y }}">{{ $y }}</option>
+                            <option class="bg-gray-900 text-white" value="{{ $y }}">{{ $y }}</option>
                         @endfor
                     </select>
                 </div>
@@ -863,10 +827,8 @@ class extends Component {
                     {{-- Revenue Bar Chart --}}
                     <div class="bg-surface-dark border border-[#3E4C59] rounded-xl p-5">
                         <div class="mb-4">
-                            <h3 class="text-white text-xs font-black uppercase tracking-widest">Forecast Pendapatan</h3>
-                            <p class="text-[10px] text-slate-400 mt-1">
-                                {{ $this->revenueChartData['trend_desc'] }}
-                            </p>
+                            <h3 class="text-white text-xs font-black uppercase tracking-widest">Pendapatan Bulan {{ \Carbon\Carbon::create()->month($filterMonth)->translatedFormat('F') }} {{ $filterYear }}</h3>
+                            <p class="text-[10px] text-slate-400 mt-1">Grafik tren pendapatan harian pada bulan terpilih.</p>
                         </div>
                         <div class="h-64">
                             <canvas id="revenueChart"></canvas>

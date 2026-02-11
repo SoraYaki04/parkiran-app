@@ -18,6 +18,7 @@ class ActivityLog extends Model
         'target',
         'description',
         'ip_address',
+        'user_agent',
         'old_values',
         'new_values',
     ];
@@ -75,6 +76,7 @@ class ActivityLog extends Model
     /**
      * Buat log aktivitas dengan IP address otomatis.
      */
+
     public static function log(
         string $action,
         string $description,
@@ -90,6 +92,7 @@ class ActivityLog extends Model
             'target'      => $target,
             'description' => $description,
             'ip_address'  => request()->ip(),
+            'user_agent'  => request()->userAgent(),
             'old_values'  => $oldValues,
             'new_values'  => $newValues,
         ]);
