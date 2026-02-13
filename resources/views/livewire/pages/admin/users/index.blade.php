@@ -470,7 +470,7 @@ class extends Component {
          class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
         
         <div @click.away="$wire.closeModal(); open=false"
-            class="bg-card-dark w-full max-w-md p-5 md:p-6 rounded-xl max-h-[90vh] overflow-y-auto">
+            class="bg-card-dark w-full max-w-md p-5 md:p-6 rounded-xl max-h-[90vh] overflow-y-auto scrollbar-hide">
             <h3 class="text-white font-bold mb-4">
                 {{ $isEdit ? 'Edit User' : 'Tambah User' }}
             </h3>
