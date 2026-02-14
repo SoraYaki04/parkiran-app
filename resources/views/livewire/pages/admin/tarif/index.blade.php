@@ -29,15 +29,18 @@ class extends Component {
         string $action,
         string $description,
         string $target = null,
-        string $category = 'MASTER'
+        string $category = 'MASTER',
+        ?array $oldValues = null,
+        ?array $newValues = null,
     ) {
-        ActivityLog::create([
-            'user_id'     => auth()->id(),
-            'action'      => $action,
-            'category'    => $category,
-            'target'      => $target,
-            'description' => $description,
-        ]);
+        ActivityLog::log(
+            action: $action,
+            description: $description,
+            target: $target,
+            category: $category,
+            oldValues: $oldValues,
+            newValues: $newValues,
+        );
     }
 
     /* ========= DATA ========= */
@@ -110,12 +113,41 @@ class extends Component {
         if ($this->isEdit) {
             // ===== UPDATE =====
             $tarif = TarifParkir::findOrFail($this->tarifId);
+
+            // Capture old values
+            $oldValues = [
+                'tipe_kendaraan_id' => $tarif->tipe_kendaraan_id,
+                'durasi_min'        => $tarif->durasi_min,
+                'durasi_max'        => $tarif->durasi_max,
+                'tarif'             => $tarif->tarif,
+            ];
+
             $tarif->update($data);
+
+            // Capture new values
+            $newValues = [
+                'tipe_kendaraan_id' => $this->tipe_kendaraan_id,
+                'durasi_min'        => $this->durasi_min,
+                'durasi_max'        => $this->durasi_max,
+                'tarif'             => $this->tarif,
+            ];
+
+            // Only keep changed fields
+            foreach ($oldValues as $key => $val) {
+                if ($val == ($newValues[$key] ?? null)) {
+                    unset($oldValues[$key], $newValues[$key]);
+                }
+            }
+            if (empty($oldValues)) $oldValues = null;
+            if (empty($newValues)) $newValues = null;
 
             $this->logActivity(
                 'UPDATE_TARIF',
                 'Update tarif parkir',
-                "Tarif ID: {$tarif->id}, Tipe Kendaraan ID: {$tarif->tipe_kendaraan_id}"
+                "Tarif ID: {$tarif->id}, Tipe Kendaraan ID: {$tarif->tipe_kendaraan_id}",
+                'MASTER',
+                $oldValues,
+                $newValues
             );
 
             $message = 'Tarif berhasil diperbarui!';
@@ -132,7 +164,10 @@ class extends Component {
                 $this->logActivity(
                     'RESTORE_TARIF',
                     'Restore tarif parkir',
-                    "Tarif ID: {$tarif->id}, Tipe Kendaraan ID: {$tarif->tipe_kendaraan_id}"
+                    "Tarif ID: {$tarif->id}, Tipe Kendaraan ID: {$tarif->tipe_kendaraan_id}",
+                    'MASTER',
+                    null,
+                    ['tarif' => $this->tarif]
                 );
 
                 $message = 'Tarif lama dipulihkan & diperbarui!';
@@ -143,7 +178,10 @@ class extends Component {
                 $this->logActivity(
                     'CREATE_TARIF',
                     'Menambahkan tarif parkir',
-                    "Tarif ID: {$tarif->id}, Tipe Kendaraan ID: {$tarif->tipe_kendaraan_id}"
+                    "Tarif ID: {$tarif->id}, Tipe Kendaraan ID: {$tarif->tipe_kendaraan_id}",
+                    'MASTER',
+                    null,
+                    $data
                 );
 
                 $message = 'Tarif berhasil ditambahkan!';
@@ -192,15 +230,15 @@ class extends Component {
      x-on:close-modal.window="open = false">
 
     {{-- HEADER --}}
-    <header class="px-8 py-6 border-b border-gray-800 flex justify-between items-end flex-shrink-0">
+    <header class="px-4 md:px-8 py-4 md:py-6 border-b border-gray-800 flex flex-col sm:flex-row justify-between sm:items-end gap-3 flex-shrink-0">
         <div>
-            <h2 class="text-white text-3xl font-black">Tarif Parkir</h2>
-            <p class="text-slate-400">Kelola tarif berdasarkan durasi & tipe kendaraan</p>
+            <h2 class="text-white text-2xl md:text-3xl font-black">Tarif Parkir</h2>
+            <p class="text-slate-400 text-sm">Kelola tarif berdasarkan durasi & tipe kendaraan</p>
         </div>
 
         @if(auth()->user()->role_id == 1)
         <button wire:click="create"
-                class="flex items-center gap-2 bg-primary text-black px-5 py-2.5 rounded-lg font-bold">
+                class="flex items-center gap-2 bg-primary text-black px-5 py-2.5 rounded-lg font-bold text-sm w-fit">
             <span class="material-symbols-outlined">add</span>
             Tambah Tarif
         </button>
@@ -208,9 +246,9 @@ class extends Component {
     </header>
 
     {{-- FILTER --}}
-    <div class="px-8 pt-6 flex-shrink-0">
-        <div class="bg-surface-dark p-5 rounded-xl border border-[#3E4C59]">
-            <div class="flex flex-col md:flex-row gap-4">
+    <div class="px-4 md:px-8 pt-4 md:pt-6 flex-shrink-0">
+        <div class="bg-surface-dark p-4 md:p-5 rounded-xl border border-[#3E4C59]">
+            <div class="flex flex-col md:flex-row gap-3 md:gap-4">
                 <select wire:model.live="filterTipe"
                         class="bg-gray-900 border border-[#3E4C59] rounded-lg px-4 py-2 text-white">
                     <option value="">Semua Tipe Kendaraan</option>
@@ -223,10 +261,11 @@ class extends Component {
     </div>
 
     {{-- TABLE --}}
-    <div class="flex-1 overflow-y-auto px-8 py-6 scrollbar-hide">
+    <div class="flex-1 overflow-y-auto px-4 md:px-8 py-4 md:py-6 scrollbar-hide">
         <div class="bg-surface-dark border border-[#3E4C59] rounded-xl overflow-hidden">
 
-            <table class="w-full table-fixed">
+            <div class="overflow-x-auto">
+            <table class="w-full table-fixed min-w-[500px]">
                 <thead class="bg-gray-900">
                     <tr>
                         <th class="px-6 py-4 text-left text-slate-400 text-xs w-1/4">Tipe Kendaraan</th>
@@ -262,12 +301,13 @@ class extends Component {
                     @endforelse
                 </tbody>
             </table>
+            </div>
 
         </div>
 
     </div>
     {{-- Pagination --}}
-    <div class="mt-4 px-8">
+    <div class="mt-4 px-4 md:px-8">
         {{ $this->tarifs->links() }}
     </div>
 
@@ -275,13 +315,13 @@ class extends Component {
     @if(auth()->user()->role_id == 1)
     {{-- MODAL --}}
     <div x-show="open" x-transition
-         class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-        <div class="bg-card-dark w-full max-w-md p-6 rounded-xl">
+         class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div class="bg-card-dark w-full max-w-md p-5 md:p-6 rounded-xl">
             <h3 class="text-white font-bold mb-4">
                 {{ $isEdit ? 'Edit Tarif Parkir' : 'Tambah Tarif Parkir' }}
             </h3>
 
-            <form wire:submit.prevent="save" class="space-y-3">
+            <form wire:submit.prevent="save" wire:confirm="Apakah anda yakin?" class="space-y-3">
 
                 <div>
                     <label class="text-sm text-gray-400">Tipe Kendaraan</label>
@@ -311,8 +351,11 @@ class extends Component {
                 <div>
                     <label class="text-sm text-gray-400">Tarif</label>
                     <input wire:model="tarif" type="number"
-                           class="w-full bg-[#161e25] border border-[#3E4C59] rounded-lg px-4 py-2 text-white"
-                           placeholder="Tarif (Rp)">
+                        oninput="this.value=this.value.replace(/[^0-9]/g,'');"
+                        min="1"
+                        step="1"
+                        class="w-full bg-[#161e25] border border-[#3E4C59] rounded-lg px-4 py-2 text-white"
+                        placeholder="Tarif (Rp)">
                 </div>
 
                 <div class="flex justify-end gap-2 pt-4">

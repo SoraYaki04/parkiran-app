@@ -1,5 +1,5 @@
-{{-- Menggunakan min-h-screen agar container bisa memanjang mengikuti konten --}}
-<div class="bg-[#0B0F1A] font-sans text-gray-100 min-h-screen flex flex-col antialiased w-full" wire:poll.5s>
+{{-- Menggunakan h-screen + overflow-hidden agar pas di layar tanpa scroll --}}
+<div class="bg-[#0B0F1A] font-sans text-gray-100 h-screen flex flex-col antialiased w-full overflow-hidden" wire:poll.5s>
     
     {{-- Internal CSS --}}
     <style>
@@ -13,20 +13,14 @@
             border: 1px solid rgba(255, 255, 255, 0.05);
         }
 
-        /* HIDE SCROLLBAR: Untuk Chrome, Safari dan Opera */
-        ::-webkit-scrollbar {
-            display: none;
-        }
-
-        /* HIDE SCROLLBAR: Untuk IE, Edge, dan Firefox */
-        html {
-            -ms-overflow-style: none;  /* IE and Edge */
-            scrollbar-width: none;  /* Firefox */
-        }
+        /* Hapus scroll dari halaman */
+        html, body { overflow: hidden; height: 100%; margin: 0; }
+        ::-webkit-scrollbar { display: none; }
+        html { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 
-    {{-- HEADER: Dibuat sticky agar tetap terlihat saat scroll --}}
-    <header class="flex-none w-full px-10 py-5 flex items-center justify-between z-10 border-b border-white/5 bg-[#0B0F1A]/80 backdrop-blur-md sticky top-0">
+    {{-- HEADER --}}
+    <header class="flex-none w-full px-10 py-3 flex items-center justify-between z-10 border-b border-white/5 bg-[#0B0F1A]/80 backdrop-blur-md">
         <div class="flex items-center gap-6">
             <div class="p-3 bg-primary rounded-lg shadow-[0_0_15px_rgba(250,204,21,0.3)]">
                 <svg class="w-8 h-8 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg>
@@ -59,11 +53,11 @@
     </header>
 
     {{-- MAIN CONTENT --}}
-    <main class="flex-1 px-10 py-6 flex flex-col gap-12">
+    <main class="flex-1 px-10 py-4 flex flex-col gap-4 overflow-hidden min-h-0">
         @foreach($vehicleData as $tipe)
-            <section class="flex-none">
+            <section class="flex-1 flex flex-col min-h-0">
                 {{-- HEADER TIPE: Menampilkan Progres Kumulatif Seluruh Area --}}
-                <div class="flex items-center gap-6 mb-6">
+                <div class="flex items-center gap-6 mb-3 flex-none">
                     <div class="flex flex-col">
                         <span class="text-[10px] font-black text-gray-500 uppercase tracking-[0.3em]">TIPE</span>
                         <h3 class="text-2xl font-display font-bold text-white tracking-tight uppercase">
@@ -84,9 +78,9 @@
                 </div>
 
                 {{-- GRID AREA --}}
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 flex-1 min-h-0">
                     @foreach($tipe['areas'] as $area)
-                        <div class="glass rounded-2xl p-6 flex flex-col justify-between hover:border-primary/40 transition-all duration-500 group relative overflow-hidden min-h-[240px]">
+                        <div class="glass rounded-2xl p-5 flex flex-col justify-between hover:border-primary/40 transition-all duration-500 group relative overflow-hidden">
                             
                             {{-- Nama Area --}}
                             <div class="relative z-10">

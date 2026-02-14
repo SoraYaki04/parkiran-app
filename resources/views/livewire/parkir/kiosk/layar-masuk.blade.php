@@ -91,7 +91,7 @@
                     rounded-2xl border-2 border-primary/50
                     bg-gradient-to-b from-white/10 to-white/5 px-8 py-10
                     shadow-[0_0_60px_-10px_rgba(250,204,20,0.3)]">
-
+   
                 @if ($state === 'qr_generated' && $qrUrl)
                     <img src="{{ $qrUrl }}" alt="QR Parkir"
                         class="w-[280px] h-[280px] object-contain bg-white p-4 rounded-xl shadow-lg" />

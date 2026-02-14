@@ -32,13 +32,12 @@ class LoginForm extends Form
         string $target = null,
         string $category = 'AUTH'
     ) {
-        ActivityLog::create([
-            'user_id'     => auth()->id() ?? null,
-            'action'      => $action,
-            'category'    => $category,
-            'target'      => $target,
-            'description' => $description,
-        ]);
+        ActivityLog::log(
+            action: $action,
+            description: $description,
+            target: $target,
+            category: $category,
+        );
     }
 
     public function authenticate(): void
