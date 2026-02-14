@@ -51,7 +51,7 @@ Ikuti langkah-langkah berikut untuk menjalankan proyek ini di komputer lokal And
 
 1.  **Clone Repositori**
     ```bash
-    git clone https://github.com/username/parkiran-app.git
+    git clone https://github.com/SoraYaki04/parkiran-app.git
     cd parkiran-app
     ```
 
