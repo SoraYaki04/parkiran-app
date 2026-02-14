@@ -38,15 +38,16 @@ class extends Component
         $this->autoExpireMember();
     }
 
-    private function logActivity(string $action, string $description, string $target = null, string $category = 'MASTER')
+    private function logActivity(string $action, string $description, string $target = null, string $category = 'MASTER', ?array $oldValues = null, ?array $newValues = null)
     {
-        ActivityLog::create([
-            'user_id' => auth()->id(),
-            'action' => $action,
-            'category' => $category,
-            'target' => $target,
-            'description' => $description,
-        ]);
+        ActivityLog::log(
+            action: $action,
+            description: $description,
+            target: $target,
+            category: $category,
+            oldValues: $oldValues,
+            newValues: $newValues,
+        );
     }
 
     private function autoExpireMember()
@@ -261,6 +262,16 @@ class extends Component
             ->first();
 
         if ($member) {
+            // Capture old values before update
+            $oldValues = [
+                'nama'             => $member->nama,
+                'no_hp'            => $member->no_hp,
+                'tier_member_id'   => $member->tier_member_id,
+                'tanggal_mulai'    => $member->tanggal_mulai,
+                'tanggal_berakhir' => $member->tanggal_berakhir,
+                'status'           => $member->status,
+            ];
+
             if ($member->trashed()) {
                 $member->restore();
             }
@@ -274,10 +285,31 @@ class extends Component
                 'status'           => $this->isEdit ? $this->status : 'aktif',
             ]);
 
+            $newValues = [
+                'nama'             => $this->nama,
+                'no_hp'            => $this->no_hp,
+                'tier_member_id'   => $this->tier_member_id,
+                'tanggal_mulai'    => $this->tanggal_mulai,
+                'tanggal_berakhir' => $this->tanggal_berakhir,
+                'status'           => $this->isEdit ? $this->status : 'aktif',
+            ];
+
+            // Only keep changed fields
+            foreach ($oldValues as $key => $val) {
+                if ($val == ($newValues[$key] ?? null)) {
+                    unset($oldValues[$key], $newValues[$key]);
+                }
+            }
+            if (empty($oldValues)) $oldValues = null;
+            if (empty($newValues)) $newValues = null;
+
             $this->logActivity(
                 $this->isEdit ? 'UPDATE_MEMBER' : 'RESTORE_MEMBER',
                 $this->isEdit ? 'Update data member' : 'Restore dan update member lama',
-                "ID {$member->id} ({$member->kode_member})"
+                "ID {$member->id} ({$member->kode_member})",
+                'MASTER',
+                $oldValues,
+                $newValues
             );
 
         } else {
@@ -294,7 +326,17 @@ class extends Component
             $this->logActivity(
                 'CREATE_MEMBER',
                 'Menambahkan member baru',
-                "ID {$member->id} ({$member->kode_member})"
+                "ID {$member->id} ({$member->kode_member})",
+                'MASTER',
+                null,
+                [
+                    'nama'             => $this->nama,
+                    'no_hp'            => $this->no_hp,
+                    'tier_member_id'   => $this->tier_member_id,
+                    'tanggal_mulai'    => $this->tanggal_mulai,
+                    'tanggal_berakhir' => $this->tanggal_berakhir,
+                    'status'           => 'aktif',
+                ]
             );
         }
 
@@ -372,23 +414,23 @@ class extends Component
     x-on:close-modal.window="open=false">
 
     {{-- HEADER --}}
-    <header class="px-8 py-6 border-b border-gray-800 flex justify-between items-end">
+    <header class="px-4 md:px-8 py-4 md:py-6 border-b border-gray-800 flex flex-col sm:flex-row justify-between sm:items-end gap-3">
         <div>
-            <h2 class="text-3xl font-black text-white">Managemen List Member</h2>
-            <p class="text-slate-400">Managemen member terdaftar</p>
+            <h2 class="text-2xl md:text-3xl font-black text-white">Managemen List Member</h2>
+            <p class="text-slate-400 text-sm">Managemen member terdaftar</p>
         </div>
 
         <button wire:click="create"
-            class="flex items-center gap-2 h-10 px-5 bg-primary text-black font-bold rounded-lg">
+            class="flex items-center gap-2 h-10 px-5 bg-primary text-black font-bold rounded-lg text-sm w-fit">
             <span class="material-symbols-outlined">add</span>
             Register Member
         </button>
     </header>
 
     {{-- SEARCH --}}
-    <div class="px-8 pt-6 flex-shrink-0">
-        <div class="bg-surface-dark p-5 rounded-xl border border-[#3E4C59]">
-            <div class="flex flex-col md:flex-row gap-4">
+    <div class="px-4 md:px-8 pt-4 md:pt-6 flex-shrink-0">
+        <div class="bg-surface-dark p-4 md:p-5 rounded-xl border border-[#3E4C59]">
+            <div class="flex flex-col md:flex-row gap-3 md:gap-4">
                 <input wire:model.live="search"
                     class="w-full bg-gray-900 border border-[#3E4C59] rounded-lg px-4 py-2 text-white"
                     placeholder="Cari kode / nama / plat kendaraan">
@@ -413,9 +455,10 @@ class extends Component
     </div>
 
     {{-- TABLE --}}
-    <div class="flex-1 overflow-y-auto px-8 py-6">
+    <div class="flex-1 overflow-y-auto px-4 md:px-8 py-4 md:py-6">
         <div class="bg-surface-dark border border-[#3E4C59] rounded-xl overflow-hidden min-h-[300px]">
-            <table class="w-full">
+            <div class="overflow-x-auto">
+            <table class="w-full min-w-[700px]">
                 <thead class="bg-gray-900 sticky top-0 z-10">
                     <tr>
                         <th class="px-6 py-4 text-xs text-slate-400 text-left">Member ID</th>
@@ -503,6 +546,7 @@ class extends Component
                 </tbody>
 
             </table>
+            </div>
         </div>
     </div>
     <div class="mt-6">
@@ -512,16 +556,16 @@ class extends Component
     {{-- MODAL MEMBER --}}
     <div x-show="open"
         x-transition
-        class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
 
-        <div class="bg-card-dark w-full max-w-lg p-6 rounded-xl max-h-[90vh] overflow-y-auto scrollbar-hide">
+        <div class="bg-card-dark w-full max-w-lg p-5 md:p-6 rounded-xl max-h-[90vh] overflow-y-auto scrollbar-hide">
 
             {{-- TITLE --}}
             <h3 class="text-white font-bold mb-4">
                 {{ $isEdit ? 'Edit Member' : 'Tambah Member' }}
             </h3>
 
-            <form wire:submit.prevent="save" class="space-y-3">
+            <form wire:submit.prevent="save" wire:confirm="Apakah anda yakin?" class="space-y-3">
 
                 {{-- KODE MEMBER --}}
                 <div>

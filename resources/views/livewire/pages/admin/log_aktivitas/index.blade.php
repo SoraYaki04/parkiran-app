@@ -25,6 +25,21 @@ class extends Component {
         }
     }
 
+    public $userAgentModal = false;
+    public $selectedUserAgent = '';
+
+    public function showUserAgent($userAgent)
+    {
+        $this->selectedUserAgent = $userAgent;
+        $this->userAgentModal = true;
+    }
+
+    public function closeUserAgentModal()
+    {
+        $this->userAgentModal = false;
+        $this->selectedUserAgent = '';
+    }
+
     public function roleBadge($roleId): array
     {
         return match ((int) $roleId) {
@@ -77,19 +92,19 @@ class extends Component {
 ?>
 
 <div class="flex-1 flex flex-col h-full">
-    <div class="max-w-[1280px] mx-auto p-8 flex flex-col h-full">
+    <div class="max-w-[1280px] mx-auto p-4 md:p-8 flex flex-col h-full">
 
         {{-- HEADER --}}
-        <div class="flex flex-wrap items-end justify-between gap-4 mb-8">
+        <div class="flex flex-wrap items-end justify-between gap-4 mb-6 md:mb-8">
             <div>
-                <h2 class="text-white text-3xl font-black">Log Aktivitas Sistem</h2>
-                <p class="text-slate-400">Monitor dan lacak seluruh aktivitas sistem</p>
+                <h2 class="text-white text-2xl md:text-3xl font-black">Log Aktivitas Sistem</h2>
+                <p class="text-slate-400 text-sm">Monitor dan lacak seluruh aktivitas sistem</p>
             </div>
         </div>
 
         {{-- FILTER --}}
-        <div class="bg-surface-dark p-5 rounded-xl border border-[#3E4C59] mb-6">
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="bg-surface-dark p-4 md:p-5 rounded-xl border border-[#3E4C59] mb-4 md:mb-6">
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
                 <input wire:model.live.debounce.300ms="search"
                     class="w-full bg-gray-900 border border-[#3E4C59] rounded-lg pl-4 py-2 text-white text-sm focus:border-primary outline-none transition-all"
                     placeholder="Cari deskripsi / target...">
@@ -100,6 +115,9 @@ class extends Component {
                     <option value="AUTH">AUTH</option>
                     <option value="TRANSAKSI">TRANSAKSI</option>
                     <option value="MASTER">MASTER</option>
+                    <option value="NAVIGATION">NAVIGATION</option>
+                    <option value="SYSTEM">SYSTEM</option>
+                    <option value="LAPORAN">LAPORAN</option>
                 </select>
 
                 <select wire:model.live="filterAction"
@@ -138,6 +156,14 @@ class extends Component {
                         <option value="CETAK_STRUK">CETAK_STRUK</option>
                         <option value="EXPORT">EXPORT</option>
                     </optgroup>
+                    <optgroup label="Navigasi" class="bg-surface-dark text-primary font-bold">
+                        <option value="PAGE_VISIT">PAGE_VISIT</option>
+                    </optgroup>
+                    <optgroup label="Sistem" class="bg-surface-dark text-primary font-bold">
+                        <option value="CREATE_BACKUP">CREATE_BACKUP</option>
+                        <option value="RESTORE_BACKUP">RESTORE_BACKUP</option>
+                        <option value="DELETE_BACKUP">DELETE_BACKUP</option>
+                    </optgroup>
                 </select>
 
                 <select wire:model.live="filterUser"
@@ -150,10 +176,163 @@ class extends Component {
             </div>
         </div>
 
-        {{-- TABLE --}}
-        <div class="flex-1 overflow-y-auto scrollbar-hide">
+        {{-- ==================== --}}
+        {{-- MOBILE CARD VIEW    --}}
+        {{-- ==================== --}}
+        <div class="flex-1 overflow-y-auto scrollbar-hide md:hidden">
+            <div class="space-y-3">
+                @forelse($this->logs as $log)
+                @php
+                $role = $this->roleBadge($log->user?->role_id);
+                $isActive = ($log->user?->status === 'aktif');
+                $actionColor = match(true) {
+                    str_contains($log->action, 'CREATE') => 'bg-emerald-500 text-emerald-950',
+                    str_contains($log->action, 'DELETE') => 'bg-red-500 text-red-950',
+                    str_contains($log->action, 'UPDATE') => 'bg-amber-400 text-amber-950',
+                    str_contains($log->action, 'LOGIN') => 'bg-blue-400 text-blue-950',
+                    str_contains($log->action, 'PAGE_VISIT') => 'bg-cyan-400 text-cyan-950',
+                    str_contains($log->action, 'BACKUP') || str_contains($log->action, 'RESTORE') => 'bg-violet-400 text-violet-950',
+                    default => 'bg-primary text-black',
+                };
+                $hasChanges = $log->old_values || $log->new_values;
+                @endphp
+
+                <div x-data="{ expanded: false }"
+                     class="bg-surface-dark border border-[#3E4C59] rounded-xl p-4 space-y-3">
+
+                    {{-- Top Row: User + Timestamp --}}
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="flex items-center gap-2.5 min-w-0">
+                            <div class="relative flex-shrink-0">
+                                <div class="w-9 h-9 rounded-lg flex items-center justify-center border {{ $role['class'] }} shadow-lg">
+                                    <span class="font-black text-xs uppercase">{{ substr($log->user?->name ?? 'S', 0, 1) }}</span>
+                                </div>
+                                <div class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 border-2 border-surface-dark rounded-full {{ $isActive ? 'bg-emerald-500' : 'bg-red-500' }}"></div>
+                            </div>
+                            <div class="min-w-0">
+                                <p class="text-white text-sm font-bold italic truncate">{{ $log->user?->name ?? 'SYSTEM' }}</p>
+                                <p class="text-[9px] uppercase tracking-[0.15em] font-black text-slate-500">{{ $role['label'] }}</p>
+                            </div>
+                        </div>
+                        <div class="text-right flex-shrink-0">
+                            <p class="text-white text-xs font-bold">{{ $log->created_at->format('d M Y') }}</p>
+                            <p class="text-slate-500 text-[10px] font-mono">{{ $log->created_at->format('H:i:s') }}</p>
+                        </div>
+                    </div>
+
+                    {{-- Action Badge + Target --}}
+                    <div class="flex flex-wrap items-center gap-2">
+                        <span class="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-tighter {{ $actionColor }}">
+                            {{ $log->action }}
+                        </span>
+                        @if($log->target)
+                            <span class="text-[10px] text-slate-300 font-mono bg-gray-900/50 px-1.5 py-0.5 rounded border border-[#3E4C59] truncate max-w-[200px]">
+                                {{ $log->target }}
+                            </span>
+                        @endif
+                    </div>
+
+                    {{-- Description --}}
+                    <p class="text-xs text-slate-400 leading-relaxed line-clamp-2">{{ $log->description }}</p>
+
+                    {{-- Footer Row: IP + Detail Toggle --}}
+                    <div class="flex items-center justify-between pt-1 border-t border-[#3E4C59]/50">
+                        @if($log->ip_address)
+                            <span class="text-[10px] text-slate-500 font-mono">IP: {{ $log->ip_address }}</span>
+                        @else
+                            <span class="text-[10px] text-slate-600">-</span>
+                        @endif
+
+                        @if($log->user_agent)
+                             <button wire:click="showUserAgent('{{ $log->user_agent }}')" 
+                                 class="ml-2 text-[10px] text-primary hover:underline font-bold tracking-tighter uppercase relative z-10">
+                                 UA
+                             </button>
+                        @endif
+
+                        @if($hasChanges)
+                            <button @click="expanded = !expanded"
+                                class="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider transition-all px-2 py-1 rounded-lg"
+                                :class="expanded ? 'text-primary bg-primary/10' : 'text-slate-500 hover:text-primary'">
+                                <span x-text="expanded ? 'Tutup' : 'Detail'"></span>
+                                <span class="material-symbols-outlined text-[14px] transition-transform"
+                                    :class="expanded ? 'rotate-180' : ''">expand_more</span>
+                            </button>
+                        @endif
+                    </div>
+
+                    {{-- Expandable Detail --}}
+                    @if($hasChanges)
+                    <div x-show="expanded" x-collapse x-cloak class="space-y-3 pt-2">
+                        @if($log->old_values)
+                        <div>
+                            <p class="text-[10px] font-black uppercase tracking-widest text-red-400 mb-1.5 flex items-center gap-1">
+                                <span class="material-symbols-outlined text-[14px]">remove_circle</span>
+                                Data Sebelum
+                            </p>
+                            <div class="bg-red-500/5 border border-red-500/20 rounded-lg p-2.5 space-y-1">
+                                @foreach($log->old_values as $key => $value)
+                                    <div class="flex justify-between gap-2 text-[11px]">
+                                        <span class="text-slate-500 font-mono flex-shrink-0">{{ $key }}</span>
+                                        <span class="text-red-300 font-mono text-right truncate">{{ is_array($value) ? json_encode($value) : $value }}</span>
+                                    </div>
+                                @endforeach
+                            </div>
+                        </div>
+                        @endif
+
+                        @if($log->new_values)
+                        <div>
+                            <p class="text-[10px] font-black uppercase tracking-widest text-emerald-400 mb-1.5 flex items-center gap-1">
+                                <span class="material-symbols-outlined text-[14px]">add_circle</span>
+                                Data Sesudah
+                            </p>
+                            <div class="bg-emerald-500/5 border border-emerald-500/20 rounded-lg p-2.5 space-y-1">
+                                @foreach($log->new_values as $key => $value)
+                                    <div class="flex justify-between gap-2 text-[11px]">
+                                        <span class="text-slate-500 font-mono flex-shrink-0">{{ $key }}</span>
+                                        <span class="text-emerald-300 font-mono text-right truncate">{{ is_array($value) ? json_encode($value) : $value }}</span>
+                                    </div>
+                                @endforeach
+                            </div>
+                        </div>
+                        @endif
+
+                        @if($log->user_agent)
+                        <div>
+                            <p class="text-[10px] font-black uppercase tracking-widest text-blue-400 mb-1.5 flex items-center gap-1">
+                                <span class="material-symbols-outlined text-[14px]">devices</span>
+                                User Agent
+                            </p>
+                            <div class="bg-blue-500/5 border border-blue-500/20 rounded-lg p-2.5">
+                                <p class="text-[11px] text-blue-300 font-mono break-all leading-relaxed">
+                                    {{ $log->user_agent }}
+                                </p>
+                            </div>
+                        </div>
+                        @endif
+                    </div>
+                    @endif
+                </div>
+
+                @empty
+                <div class="py-16 text-center">
+                    <div class="flex flex-col items-center opacity-20">
+                        <span class="material-symbols-outlined text-5xl">history</span>
+                        <p class="mt-2 font-black uppercase tracking-widest text-xs">Data log kosong</p>
+                    </div>
+                </div>
+                @endforelse
+            </div>
+        </div>
+
+        {{-- ==================== --}}
+        {{-- DESKTOP TABLE VIEW  --}}
+        {{-- ==================== --}}
+        <div class="flex-1 overflow-y-auto scrollbar-hide hidden md:block">
             <div class="bg-surface-dark border border-[#3E4C59] rounded-xl shadow-2xl min-h-[300px]">
-                <table class="w-full">
+                <div class="overflow-x-auto">
+                <table class="w-full min-w-[800px]">
                     <thead class="bg-gray-900 sticky top-0 z-10">
                         <tr>
                             <th
@@ -171,22 +350,31 @@ class extends Component {
                             <th
                                 class="px-6 py-4 text-left text-[10px] font-black uppercase tracking-widest text-slate-500 border-b border-[#3E4C59]">
                                 Deskripsi</th>
+                            <th
+                                class="px-6 py-4 text-left text-[10px] font-black uppercase tracking-widest text-slate-500 border-b border-[#3E4C59]">
+                                IP Address</th>
+                            <th
+                                class="px-6 py-4 text-center text-[10px] font-black uppercase tracking-widest text-slate-500 border-b border-[#3E4C59]">
+                                Detail</th>
                         </tr>
                     </thead>
 
-                    <tbody class="divide-y divide-[#3E4C59]">
-                        @forelse($this->logs as $log)
-                        @php
-                        $role = $this->roleBadge($log->user?->role_id);
-                        $isActive = ($log->user?->status === 'aktif');
-                        $actionColor = match(true) {
-                        str_contains($log->action, 'CREATE') => 'bg-emerald-500 text-emerald-950',
-                        str_contains($log->action, 'DELETE') => 'bg-red-500 text-red-950',
-                        str_contains($log->action, 'UPDATE') => 'bg-amber-400 text-amber-950',
-                        str_contains($log->action, 'LOGIN') => 'bg-blue-400 text-blue-950',
-                        default => 'bg-primary text-black',
-                        };
-                        @endphp
+                    @forelse($this->logs as $log)
+                    @php
+                    $role = $this->roleBadge($log->user?->role_id);
+                    $isActive = ($log->user?->status === 'aktif');
+                    $actionColor = match(true) {
+                    str_contains($log->action, 'CREATE') => 'bg-emerald-500 text-emerald-950',
+                    str_contains($log->action, 'DELETE') => 'bg-red-500 text-red-950',
+                    str_contains($log->action, 'UPDATE') => 'bg-amber-400 text-amber-950',
+                    str_contains($log->action, 'LOGIN') => 'bg-blue-400 text-blue-950',
+                    str_contains($log->action, 'PAGE_VISIT') => 'bg-cyan-400 text-cyan-950',
+                    str_contains($log->action, 'BACKUP') || str_contains($log->action, 'RESTORE') => 'bg-violet-400 text-violet-950',
+                    default => 'bg-primary text-black',
+                    };
+                    $hasChanges = $log->old_values || $log->new_values;
+                    @endphp
+                    <tbody class="divide-y divide-[#3E4C59]" x-data="{ expanded: false }">
                         <tr class="hover:bg-surface-hover transition-colors group">
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <p class="text-white text-sm font-bold">{{ $log->created_at->format('d M Y') }}</p>
@@ -242,26 +430,153 @@ class extends Component {
                                     {{ $log->description }}
                                 </p>
                             </td>
+
+                            <td class="px-6 py-4">
+                                @if($log->ip_address)
+                                    <span class="text-[11px] text-slate-400 font-mono bg-gray-900/50 px-2 py-1 rounded border border-[#3E4C59]">
+                                        {{ $log->ip_address }}
+                                    </span>
+                                    @if($log->user_agent)
+                                        <button wire:click="showUserAgent('{{ $log->user_agent }}')" 
+                                            class="ml-2 text-[10px] text-primary hover:text-white transition-colors">
+                                            <span class="material-symbols-outlined text-[16px] align-middle">devices</span>
+                                        </button>
+                                    @endif
+                                @else
+                                    <span class="text-slate-600 text-xs">-</span>
+                                @endif
+                            </td>
+
+                            <td class="px-6 py-4 text-center">
+                                @if($hasChanges)
+                                    <button @click="expanded = !expanded"
+                                        class="p-1.5 rounded-lg hover:bg-primary/10 text-slate-400 hover:text-primary transition-all"
+                                        :class="expanded ? 'bg-primary/10 text-primary' : ''">
+                                        <span class="material-symbols-outlined text-[18px] transition-transform"
+                                            :class="expanded ? 'rotate-180' : ''">expand_more</span>
+                                    </button>
+                                @else
+                                    <span class="text-slate-700 text-xs">-</span>
+                                @endif
+                            </td>
                         </tr>
-                        @empty
+
+                        {{-- EXPANDABLE DETAIL ROW --}}
+                        @if($hasChanges)
+                        <tr x-show="expanded" x-transition.duration.200ms x-cloak>
+                            <td colspan="7" class="px-6 py-4 bg-gray-900/40">
+                                <div class="grid grid-cols-2 gap-4 max-w-4xl">
+                                    @if($log->old_values)
+                                    <div>
+                                        <p class="text-[10px] font-black uppercase tracking-widest text-red-400 mb-2 flex items-center gap-1">
+                                            <span class="material-symbols-outlined text-[14px]">remove_circle</span>
+                                            Data Sebelum
+                                        </p>
+                                        <div class="bg-red-500/5 border border-red-500/20 rounded-lg p-3 space-y-1">
+                                            @foreach($log->old_values as $key => $value)
+                                                <div class="flex justify-between text-xs">
+                                                    <span class="text-slate-500 font-mono">{{ $key }}</span>
+                                                    <span class="text-red-300 font-mono">{{ is_array($value) ? json_encode($value) : $value }}</span>
+                                                </div>
+                                            @endforeach
+                                        </div>
+                                    </div>
+                                    @endif
+
+                                    @if($log->new_values)
+                                    <div>
+                                        <p class="text-[10px] font-black uppercase tracking-widest text-emerald-400 mb-2 flex items-center gap-1">
+                                            <span class="material-symbols-outlined text-[14px]">add_circle</span>
+                                            Data Sesudah
+                                        </p>
+                                        <div class="bg-emerald-500/5 border border-emerald-500/20 rounded-lg p-3 space-y-1">
+                                            @foreach($log->new_values as $key => $value)
+                                                <div class="flex justify-between text-xs">
+                                                    <span class="text-slate-500 font-mono">{{ $key }}</span>
+                                                    <span class="text-emerald-300 font-mono">{{ is_array($value) ? json_encode($value) : $value }}</span>
+                                                </div>
+                                            @endforeach
+                                        </div>
+                                    </div>
+                                    @endif
+
+                                    @if($log->user_agent)
+                                    <div class="col-span-2">
+                                        <p class="text-[10px] font-black uppercase tracking-widest text-blue-400 mb-2 flex items-center gap-1">
+                                            <span class="material-symbols-outlined text-[14px]">devices</span>
+                                            User Agent
+                                        </p>
+                                        <div class="bg-blue-500/5 border border-blue-500/20 rounded-lg p-3">
+                                            <p class="text-xs text-blue-300 font-mono break-all leading-relaxed">
+                                                {{ $log->user_agent }}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    @endif
+                                </div>
+                            </td>
+                        </tr>
+                        @endif
+                    </tbody>
+
+                    @empty
+                    <tbody>
                         <tr>
-                            <td colspan="5" class="py-24 text-center">
+                            <td colspan="7" class="py-24 text-center">
                                 <div class="flex flex-col items-center opacity-20">
                                     <span class="material-symbols-outlined text-6xl">history</span>
                                     <p class="mt-2 font-black uppercase tracking-widest text-xs">Data log kosong</p>
                                 </div>
                             </td>
                         </tr>
-                        @endforelse
                     </tbody>
+                    @endforelse
                 </table>
+                </div>
             </div>
         </div>
 
         {{-- Pagination --}}
-        <div class="mt-6">
+        <div class="mt-4 md:mt-6">
             {{ $this->logs->links() }}
         </div>
 
     </div>
+    </div>
+
+    {{-- USER AGENT MODAL --}}
+    @if($userAgentModal)
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+        <div class="bg-[#1e293b] w-full max-w-lg rounded-2xl border border-slate-700 shadow-2xl overflow-hidden" 
+             @click.away="$wire.closeUserAgentModal()">
+            
+            <div class="px-6 py-4 border-b border-slate-700 flex items-center justify-between">
+                <h3 class="text-white font-bold text-lg flex items-center gap-2">
+                    <span class="material-symbols-outlined text-primary">devices</span>
+                    User Agent Detail
+                </h3>
+                <button wire:click="closeUserAgentModal" class="text-slate-400 hover:text-white transition-colors">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            
+            <div class="p-6">
+                <div class="bg-slate-900/50 p-4 rounded-xl border border-slate-700/50 font-mono text-sm text-slate-300 break-all leading-relaxed">
+                    {{ $this->selectedUserAgent }}
+                </div>
+                
+                <p class="mt-4 text-[11px] text-slate-500 italic text-center">
+                    Informasi perangkat dan browser yang digunakan saat aktivitas tercatat.
+                </p>
+            </div>
+
+            <div class="px-6 py-4 bg-slate-800/50 border-t border-slate-700 flex justify-end">
+                <button wire:click="closeUserAgentModal" 
+                        class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white text-sm font-bold rounded-lg transition-colors">
+                    Tutup
+                </button>
+            </div>
+        </div>
+    </div>
+    @endif
 </div>

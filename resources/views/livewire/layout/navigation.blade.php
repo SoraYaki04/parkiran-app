@@ -11,13 +11,12 @@ new class extends Component
         $user = auth()->user();
 
         if ($user) {
-            ActivityLog::create([
-                'user_id'     => $user->id,
-                'action'      => 'LOGOUT',
-                'category'    => 'AUTH',
-                'target'      => $user->username,
-                'description' => "User {$user->username} berhasil logout",
-            ]);
+            ActivityLog::log(
+                action: 'LOGOUT',
+                description: "User {$user->username} berhasil logout",
+                target: $user->username,
+                category: 'AUTH',
+            );
         }
 
         Auth::logout();
@@ -30,7 +29,7 @@ new class extends Component
 };
 ?>
 
-<aside class="w-64 bg-sidebar-dark border-r border-gray-800 flex flex-col shrink-0">
+<aside class="w-64 h-full bg-sidebar-dark border-r border-gray-800 flex flex-col shrink-0 shadow-2xl md:shadow-none">
 
     {{-- LOGO --}}
     <div class="p-6 flex items-center gap-3">
@@ -60,6 +59,7 @@ new class extends Component
         x-ref="nav"
         @scroll.debounce.100ms="sessionStorage.setItem('sidebarScroll', $refs.nav.scrollTop)"
         x-init="if (sessionStorage.getItem('sidebarScroll')) { $refs.nav.scrollTop = sessionStorage.getItem('sidebarScroll') }"
+        @click="if ($event.target.closest('a') && window.innerWidth < 768) { $dispatch('close-sidebar') }"
         class="flex-1 px-4 py-4 flex flex-col gap-2 overflow-y-auto scrollbar-hide"
     >
 
@@ -76,25 +76,28 @@ new class extends Component
         </a>
 
         {{-- TRANSAKSI (ADMIN & PETUGAS) --}}
-        @if(in_array(auth()->user()->role_id, [1,2]))
-            <a href="{{ route('exit') }}" wire:navigate.preserve-scroll
+        {{-- TRANSAKSI (PETUGAS ONLY) --}}
+        @if(auth()->user()->role_id == 2)
+            <a href="{{ route('petugas.exit') }}" wire:navigate.preserve-scroll
                class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all
-               {{ request()->routeIs('exit')
+               {{ request()->routeIs('petugas.exit')
                     ? 'bg-primary/10 border-l-4 border-primary text-white'
                     : 'text-gray-400 hover:bg-gray-800 hover:text-white' }}">
                 <span class="material-symbols-outlined">garage_check</span>
                 Transaksi
             </a>
-            
-            <a href="{{ route('data_parkir') }}" wire:navigate.preserve-scroll
+        @endif
+
+        {{-- DATA PARKIR (ADMIN & PETUGAS) --}}
+        @if(in_array(auth()->user()->role_id, [1, 2]))
+            <a href="{{ route('admin.data_parkir') }}" wire:navigate.preserve-scroll
                class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all
-               {{ request()->routeIs('data_parkir')
+               {{ request()->routeIs('admin.data_parkir')
                     ? 'bg-primary/10 border-l-4 border-primary text-white'
                     : 'text-gray-400 hover:bg-gray-800 hover:text-white' }}">
                 <span class="material-symbols-outlined">check_in_out</span>
                 Data Parkir
             </a>
-
         @endif
 
         {{-- ================= DATA MASTER (ADMIN & PETUGAS) ================= --}}

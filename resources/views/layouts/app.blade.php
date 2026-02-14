@@ -18,28 +18,49 @@
 </head>
 
 <body class="font-sans antialiased bg-gray-900 text-gray-100">
-    <div class="h-screen flex overflow-hidden">
+    <div class="h-screen flex overflow-hidden" x-data="{ sidebarOpen: false }">
 
         @if(auth()->check())
-            {{-- SIDEBAR DASHBOARD --}}
-            <livewire:layout.navigation />
+            {{-- MOBILE TOP BAR --}}
+            <div class="md:hidden fixed top-0 left-0 right-0 z-40 bg-sidebar-dark/95 backdrop-blur-lg border-b border-gray-800 px-4 py-3 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="size-8 rounded-lg bg-gradient-to-br from-primary to-yellow-600
+                                flex items-center justify-center text-sidebar-dark shadow-lg shadow-primary/20">
+                        <span class="material-symbols-outlined text-[18px]">local_parking</span>
+                    </div>
+                    <h1 class="text-white text-base font-bold">Parkiran</h1>
+                </div>
+                <button @click="sidebarOpen = !sidebarOpen"
+                    class="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 transition-colors">
+                    <span class="material-symbols-outlined text-[24px]" x-text="sidebarOpen ? 'close' : 'menu'">menu</span>
+                </button>
+            </div>
+
+            {{-- OVERLAY BACKDROP (mobile only) --}}
+            <div x-show="sidebarOpen"
+                 x-transition:enter="transition-opacity ease-out duration-300"
+                 x-transition:enter-start="opacity-0"
+                 x-transition:enter-end="opacity-100"
+                 x-transition:leave="transition-opacity ease-in duration-200"
+                 x-transition:leave-start="opacity-100"
+                 x-transition:leave-end="opacity-0"
+                 @click="sidebarOpen = false"
+                 class="md:hidden fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
+                 style="display: none;"></div>
+
+            {{-- SIDEBAR --}}
+            <div class="fixed md:relative z-50 md:z-auto h-full
+                        transform transition-transform duration-300 ease-in-out
+                        md:transform-none md:translate-x-0"
+                 :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
+                 @close-sidebar.window="sidebarOpen = false">
+                <livewire:layout.navigation />
+            </div>
         @endif
 
         <div class="flex-1 flex flex-col overflow-hidden">
-            {{-- TOP BAR (optional) --}}
-            {{-- @if(auth()->check() && !request()->routeIs('dashboard'))
-                <livewire:layout.navigation />
-            @endif --}}
-
-            {{-- PAGE HEADER --}}
-            {{-- @if (isset($header))
-                <header class="border-b border-gray-800 px-8 py-6 bg-gray-900">
-                    {{ $header }}
-                </header>
-            @endif --}}
-
             {{-- PAGE CONTENT --}}
-            <main class="flex-1 overflow-y-auto">
+            <main class="flex-1 overflow-y-auto pt-14 md:pt-0">
                 {{ $slot }}
             </main>
         </div>

@@ -10,6 +10,7 @@ use App\Models\SlotParkir;
 use App\Models\TipeKendaraan;
 use App\Models\TransaksiParkir;
 use App\Models\AreaParkir;
+use App\Models\TarifParkir;
 use Carbon\Carbon;
 
 new #[Layout('layouts.app')]
@@ -80,28 +81,79 @@ class extends Component
     {
         return auth()->user()->role_id === 1;
     }
+
+    public function getTarifInfoProperty()
+    {
+        $tipeKendaraan = TipeKendaraan::with(['tarifParkir' => function($q) {
+            $q->orderBy('durasi_min', 'asc');
+        }])->get();
+
+        $colorMaps = [
+            ['text' => 'text-primary',      'border' => 'hover:border-primary/40',      'icon_bg' => 'group-hover:bg-primary/10',      'icon' => 'text-primary'],
+            ['text' => 'text-blue-400',      'border' => 'hover:border-blue-400/40',      'icon_bg' => 'group-hover:bg-blue-400/10',      'icon' => 'text-blue-400'],
+            ['text' => 'text-emerald-400',   'border' => 'hover:border-emerald-400/40',   'icon_bg' => 'group-hover:bg-emerald-400/10',   'icon' => 'text-emerald-400'],
+            ['text' => 'text-violet-400',    'border' => 'hover:border-violet-400/40',    'icon_bg' => 'group-hover:bg-violet-400/10',    'icon' => 'text-violet-400'],
+            ['text' => 'text-amber-400',     'border' => 'hover:border-amber-400/40',     'icon_bg' => 'group-hover:bg-amber-400/10',     'icon' => 'text-amber-400'],
+            ['text' => 'text-rose-400',      'border' => 'hover:border-rose-400/40',      'icon_bg' => 'group-hover:bg-rose-400/10',      'icon' => 'text-rose-400'],
+        ];
+
+        return $tipeKendaraan->map(function($tipe, $index) use ($colorMaps) {
+            $cm = $colorMaps[$index % count($colorMaps)];
+            return [
+                'nama_tipe'    => $tipe->nama_tipe,
+                'kode_tipe'    => $tipe->kode_tipe,
+                'color_text'   => $cm['text'],
+                'color_border' => $cm['border'],
+                'color_icon_bg'=> $cm['icon_bg'],
+                'color_icon'   => $cm['icon'],
+                'tarifs'       => $tipe->tarifParkir->map(function($t) {
+                    // Format duration label
+                    if ($t->durasi_min == 0 && $t->durasi_max <= 60) {
+                        $label = '0 - ' . $t->durasi_max . ' mnt';
+                    } elseif ($t->durasi_max >= 1440) {
+                        $jam_min = intdiv($t->durasi_min, 60);
+                        $label = $jam_min . ' jam +';
+                    } else {
+                        $jam_min = intdiv($t->durasi_min, 60);
+                        $mnt_min = $t->durasi_min % 60;
+                        $jam_max = intdiv($t->durasi_max, 60);
+                        $mnt_max = $t->durasi_max % 60;
+
+                        $from = $jam_min > 0 ? $jam_min . ' jam' . ($mnt_min > 0 ? ' ' . $mnt_min . 'm' : '') : $t->durasi_min . ' mnt';
+                        $to   = $jam_max > 0 ? $jam_max . ' jam' . ($mnt_max > 0 ? ' ' . $mnt_max . 'm' : '') : $t->durasi_max . ' mnt';
+                        $label = $from . ' - ' . $to;
+                    }
+
+                    return [
+                        'durasi_label' => $label,
+                        'tarif'        => $t->tarif,
+                    ];
+                })->toArray(),
+            ];
+        });
+    }
 }
 ?>
 
 
  <div class="flex-1 flex flex-col h-full overflow-hidden bg-gray-900 text-gray-200" wire:poll.10s>
     {{-- HEADER --}}
-    <header class="px-8 py-6 border-b border-gray-800 flex justify-between items-end bg-gray-900 backdrop-blur-xl sticky top-0 z-30">
+    <header class="px-4 md:px-8 py-4 md:py-6 border-b border-gray-800 flex flex-col sm:flex-row justify-between sm:items-end gap-3 bg-gray-900 backdrop-blur-xl sticky top-0 z-30">
         <div>
-            <h2 class="text-white text-3xl font-black">
+            <h2 class="text-white text-2xl md:text-3xl font-black">
                Dashboard
             </h2>
-            <p class="text-slate-400">
+            <p class="text-slate-400 text-sm md:text-base">
                 Ringkasan data dan kontrol sistem kendaraaan
             </p>
         </div>
-        <div class="text-right">
-            <div class="flex items-center justify-end gap-3">
+        <div class="text-left sm:text-right">
+            <div class="flex items-center sm:justify-end gap-3">
                 <span class="relative flex h-3 w-3">
                     <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
                     <span class="relative inline-flex rounded-full h-3 w-3 bg-primary shadow-[0_0_12px_#facc14]"></span>
                 </span>
-                <h1 class="text-white text-4xl font-black tracking-tighter tabular-nums">
+                <h1 class="text-white text-3xl md:text-4xl font-black tracking-tighter tabular-nums">
                     {{ now()->format('H:i') }}
                 </h1>
             </div>
@@ -112,33 +164,33 @@ class extends Component
 
     </header>
 
-    <div class="flex-1 overflow-y-auto p-8 space-y-10 scrollbar-hide">
+    <div class="flex-1 overflow-y-auto p-4 md:p-8 space-y-6 md:space-y-10 scrollbar-hide">
             
             {{-- TOP STATS --}}
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
                 {{-- REVENUE CARD --}}
-                <div class="lg:col-span-4 bg-primary p-8 rounded-[2rem] shadow-[0_20px_50px_rgba(250,204,20,0.15)] relative overflow-hidden group">
+                <div class="lg:col-span-4 bg-primary p-5 md:p-8 rounded-2xl md:rounded-[2rem] shadow-[0_20px_50px_rgba(250,204,20,0.15)] relative overflow-hidden group">
                     <div class="relative z-10">
                         <p class="text-gray-950 text-[10px] font-black uppercase tracking-[0.2em] opacity-60">Pendapatan Hari Ini</p>
-                        <h3 class="text-5xl font-black text-gray-950 mt-2 tracking-tighter italic">
-                            <span class="text-2xl font-bold mr-1">Rp</span>{{ number_format($this->todayRevenue,0,',','.') }}
+                        <h3 class="text-3xl md:text-5xl font-black text-gray-950 mt-2 tracking-tighter italic">
+                            <span class="text-xl md:text-2xl font-bold mr-1">Rp</span>{{ number_format($this->todayRevenue,0,',','.') }}
                         </h3>
                     </div>
-                    <span class="material-symbols-outlined absolute -right-8 -bottom-8 text-[180px] text-black/5 group-hover:rotate-12 transition-transform duration-700">monetization_on</span>
+                    <span class="material-symbols-outlined absolute -right-8 -bottom-8 text-[120px] md:text-[180px] text-black/5 group-hover:rotate-12 transition-transform duration-700">monetization_on</span>
                 </div>
 
                 {{-- VEHICLE TYPE STATS --}}
-                <div class="lg:col-span-8 grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div class="lg:col-span-8 grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
                     @foreach($this->occupancy as $o)
-                    <div class="bg-gray-900 border border-gray-800 p-7 rounded-[2rem] flex items-center justify-between hover:border-primary/50 transition-all group shadow-xl">
+                    <div class="bg-gray-900 border border-gray-800 p-4 md:p-7 rounded-2xl md:rounded-[2rem] flex items-center justify-between hover:border-primary/50 transition-all group shadow-xl">
                         <div>
                             <p class="text-gray-500 text-[10px] uppercase font-black tracking-widest group-hover:text-primary transition-colors">{{ $o['nama_tipe'] }} Kapasitas</p>
-                            <h4 class="text-4xl font-black text-white mt-2 tracking-tighter">
-                                {{ $o['used_slot'] }} <span class="text-gray-700 text-xl font-bold italic">/ {{ $o['total_slot'] }}</span>
+                            <h4 class="text-2xl md:text-4xl font-black text-white mt-2 tracking-tighter">
+                                {{ $o['used_slot'] }} <span class="text-gray-700 text-lg md:text-xl font-bold italic">/ {{ $o['total_slot'] }}</span>
                             </h4>
                         </div>
-                        <div class="size-16 rounded-2xl bg-gray-800 flex items-center justify-center group-hover:bg-primary transition-all duration-500 shadow-lg border border-gray-700">
-                             <span class="material-symbols-outlined text-4xl text-primary group-hover:text-gray-950 transition-colors">
+                        <div class="size-12 md:size-16 rounded-xl md:rounded-2xl bg-gray-800 flex items-center justify-center group-hover:bg-primary transition-all duration-500 shadow-lg border border-gray-700">
+                             <span class="material-symbols-outlined text-3xl md:text-4xl text-primary group-hover:text-gray-950 transition-colors">
                                 transportation
                              </span>
                         </div>
@@ -184,6 +236,59 @@ class extends Component
                 </div>
             </section>
 
+            {{-- TARIF INFO SECTION --}}
+            <section>
+                <div class="flex items-center gap-4 mb-8">
+                    <div class="h-8 w-2 bg-primary rounded-full"></div>
+                    <h3 class="text-white font-black text-xl uppercase tracking-tighter italic">Informasi <span class="text-primary">Tarif</span></h3>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
+                    @foreach($this->tarifInfo as $tipe)
+                    <div class="bg-gray-900 border border-gray-800 rounded-2xl md:rounded-[2rem] overflow-hidden {{ $tipe['color_border'] }} transition-all group shadow-xl">
+                        {{-- Card Header --}}
+                        <div class="px-5 md:px-6 py-4 md:py-5 border-b border-gray-800 flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <div class="size-10 rounded-xl bg-gray-800 flex items-center justify-center {{ $tipe['color_icon_bg'] }} transition-all border border-gray-700">
+                                    <span class="material-symbols-outlined {{ $tipe['color_icon'] }} text-xl">transportation</span>
+                                </div>
+                                <div>
+                                    <h4 class="text-white font-black text-sm uppercase tracking-tight">{{ $tipe['nama_tipe'] }}</h4>
+                                    <p class="text-gray-500 text-[9px] font-black uppercase tracking-widest">{{ $tipe['kode_tipe'] }}</p>
+                                </div>
+                            </div>
+                            <span class="text-[9px] font-black uppercase tracking-widest text-gray-600 bg-gray-800 px-2 py-1 rounded-lg border border-gray-700">
+                                {{ count($tipe['tarifs']) }} tier
+                            </span>
+                        </div>
+
+                        {{-- Tariff Tiers --}}
+                        <div class="divide-y divide-gray-800/50">
+                            @forelse($tipe['tarifs'] as $idx => $tarif)
+                            <div class="px-5 md:px-6 py-3 md:py-4 flex items-center justify-between hover:bg-gray-800/30 transition-colors">
+                                <div class="flex items-center gap-3">
+                                    <span class="text-[10px] font-black text-gray-600 bg-gray-800 size-6 rounded-lg flex items-center justify-center border border-gray-700">
+                                        {{ $idx + 1 }}
+                                    </span>
+                                    <div>
+                                        <p class="text-gray-300 text-xs font-bold">{{ $tarif['durasi_label'] }}</p>
+                                    </div>
+                                </div>
+                                <span class="{{ $tipe['color_text'] }} font-black text-sm italic tracking-tight">
+                                    Rp{{ number_format($tarif['tarif'], 0, ',', '.') }}
+                                </span>
+                            </div>
+                            @empty
+                            <div class="px-6 py-5 text-center">
+                                <p class="text-gray-600 text-xs italic">Belum ada tarif</p>
+                            </div>
+                            @endforelse
+                        </div>
+                    </div>
+                    @endforeach
+                </div>
+            </section>
+
             {{-- TABLE SECTION --}}
             <div class="space-y-6">
                 <div class="flex items-center justify-between">
@@ -193,27 +298,28 @@ class extends Component
                     </div>
                 </div>
 
-                <div class="bg-gray-900 border border-gray-800 rounded-[2rem] overflow-hidden shadow-2xl">
-                    <table class="w-full text-left">
+                <div class="bg-gray-900 border border-gray-800 rounded-2xl md:rounded-[2rem] overflow-hidden shadow-2xl">
+                    <div class="overflow-x-auto">
+                    <table class="w-full text-left min-w-[600px]">
                         <thead class="bg-gray-950/80 border-b border-gray-800">
                             <tr class="text-gray-500 text-[10px] uppercase font-black tracking-[0.2em]">
-                                <th class="px-8 py-6">Plat Nomor</th>
-                                <th class="px-8 py-6">Tipe Kendaraan</th>
-                                <th class="px-8 py-6">Lokasi</th>
-                                <th class="px-8 py-6">Waktu Masuk</th>
-                                <th class="px-8 py-6 text-center">Status</th>
+                                <th class="px-4 md:px-8 py-4 md:py-6">Plat Nomor</th>
+                                <th class="px-4 md:px-8 py-4 md:py-6">Tipe</th>
+                                <th class="px-4 md:px-8 py-4 md:py-6 hidden sm:table-cell">Lokasi</th>
+                                <th class="px-4 md:px-8 py-4 md:py-6">Waktu</th>
+                                <th class="px-4 md:px-8 py-4 md:py-6 text-center">Status</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-800/50">
                             @foreach($this->recentMovements as $session)
                             <tr class="hover:bg-primary/5 transition-colors group">
-                                <td class="px-8 py-5">
-                                    <span class="px-4 py-2 bg-gray-800 text-primary rounded-xl font-mono font-black text-sm border border-gray-700 group-hover:border-primary/50 transition-all shadow-md">
+                                <td class="px-4 md:px-8 py-4 md:py-5">
+                                    <span class="px-3 md:px-4 py-1.5 md:py-2 bg-gray-800 text-primary rounded-lg md:rounded-xl font-mono font-black text-xs md:text-sm border border-gray-700 group-hover:border-primary/50 transition-all shadow-md">
                                         {{ $session->plat_nomor }}
                                     </span>
                                 </td>
-                                <td class="px-8 py-5 text-gray-300 text-xs font-black uppercase tracking-widest">{{ $session->tipeKendaraan->nama_tipe }}</td>
-                                <td class="px-8 py-5">
+                                <td class="px-4 md:px-8 py-4 md:py-5 text-gray-300 text-xs font-black uppercase tracking-widest">{{ $session->tipeKendaraan->nama_tipe }}</td>
+                                <td class="px-4 md:px-8 py-4 md:py-5 hidden sm:table-cell">
                                     <div class="flex flex-col">
                                         <span class="text-white font-black text-xs uppercase">{{ $session->slot->area->nama_area ?? '-' }}</span>
                                         <span class="text-[9px] text-primary font-black uppercase tracking-widest italic opacity-70">
@@ -221,10 +327,10 @@ class extends Component
                                         </span>
                                     </div>
                                 </td>
-                                <td class="px-8 py-5 text-gray-400 text-xs font-black tracking-widest">{{ $session->created_at->format('H:i:s') }}</td>
-                                <td class="px-8 py-5 text-center">
+                                <td class="px-4 md:px-8 py-4 md:py-5 text-gray-400 text-xs font-black tracking-widest">{{ $session->created_at->format('H:i:s') }}</td>
+                                <td class="px-4 md:px-8 py-4 md:py-5 text-center">
                                     @if($session->status == 'IN_PROGRESS')
-                                        <span class="inline-flex items-center gap-2 px-4 py-1.5 rounded-lg bg-primary/10 border border-primary/20 text-primary text-[9px] font-black uppercase tracking-[0.15em]">
+                                        <span class="inline-flex items-center gap-1.5 md:gap-2 px-3 md:px-4 py-1.5 rounded-lg bg-primary/10 border border-primary/20 text-primary text-[9px] font-black uppercase tracking-[0.15em]">
                                             <span class="size-1.5 bg-primary rounded-full animate-ping"></span> 
                                             In Parking
                                         </span>
@@ -236,6 +342,7 @@ class extends Component
                             @endforeach
                         </tbody>
                     </table>
+                    </div>
                 </div>
             </div>
 

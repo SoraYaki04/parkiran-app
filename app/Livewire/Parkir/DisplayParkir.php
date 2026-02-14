@@ -51,7 +51,7 @@ class DisplayParkir extends Component
                     'percent'     => $percent,
                     'style'       => $style,
                 ];
-            });
+            })->filter(fn ($area) => $area['total_slots'] > 0)->values();
 
             $tipePercent = $totalTipeSlots > 0 ? round(($totalTipeUsed / $totalTipeSlots) * 100) : 0;
 
@@ -62,7 +62,7 @@ class DisplayParkir extends Component
                 'tipe_percent' => $tipePercent,
                 'areas'        => $areas,
             ];
-        });
+        })->filter(fn ($tipe) => $tipe['total_slots'] > 0)->values();
     }
 
     private function getStyleByPercent($percent) {

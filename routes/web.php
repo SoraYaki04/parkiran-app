@@ -50,13 +50,11 @@ Route::middleware('auth')->group(function () {
         ->name('password.confirm');
 
     // ================= TRANSAKSI =================
-    // ADMIN & PETUGAS
-    Route::middleware('role:admin,petugas')->group(function () {
-        Volt::route('transaksi', 'pages.exit.index')->name('exit');
-
-        Volt::route('data_parkir', 'pages.data_parkir.index')
-            ->name('data_parkir');
+    // ================= TRANSAKSI (PETUGAS SAJA) =================
+    Route::middleware(['auth', 'role:petugas'])->prefix('petugas')->name('petugas.')->group(function () {
+        Volt::route('exit', 'pages.exit.index')->name('exit'); // route transaksi petugas
     });
+
 
     // ================= LAPORAN =================
     // ADMIN & OWNER
@@ -65,11 +63,11 @@ Route::middleware('auth')->group(function () {
         Volt::route('laporan', 'pages.admin.laporan.index')
             ->name('laporan');
 
-        Route::get('export/harian/pdf', [\App\Http\Controllers\LaporanExportController::class, 'pdfHarian'])
-            ->name('export.harian.pdf');
+        Route::get('export/laporan-harian/pdf', [\App\Http\Controllers\LaporanExportController::class, 'pdfHarian'])
+            ->name('export.laporan-harian.pdf');
 
-        Route::get('export/harian/excel', [\App\Http\Controllers\LaporanExportController::class, 'excelHarian'])
-            ->name('export.harian.excel');
+        Route::get('export/laporan-harian/excel', [\App\Http\Controllers\LaporanExportController::class, 'excelHarian'])
+            ->name('export.laporan-harian.excel');
 
         Route::get('export/rentang/pdf', [\App\Http\Controllers\LaporanExportController::class, 'pdfRentang'])
             ->name('export.rentang.pdf');
@@ -86,6 +84,10 @@ Route::middleware('auth')->group(function () {
 
     // ================= DATA MASTER (ADMIN & PETUGAS) =================
     Route::middleware('role:admin,petugas')->prefix('admin')->name('admin.')->group(function () {
+
+        Volt::route('data_parkir', 'pages.data_parkir.index')
+            ->name('data_parkir');
+
         Volt::route('kendaraan', 'pages.admin.kendaraan.index')
             ->name('kendaraan');
 
