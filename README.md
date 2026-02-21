@@ -32,11 +32,23 @@ Menampilkan laporan pendapatan harian, bulanan, serta fitur export ke PDF & Exce
 ---
 
 ## 📱 Pilih Slot dan Karcis Digital (Mobile)
-Aplikasi juga dapat diakses melalui smartphone dalam satu jaringan WiFi.
+Menampilkan pemilihan slot dan karcis digital.
 
-![Pilih-Slot](docs/images/mobile-slot.jpg)
+<table align="center">
+<tr>
+<td align="center">
+<img src="docs/images/mobile-slot.jpg" width="300"/>
+<br/>
+<b>Pilih Slot</b>
+</td>
 
-![Karcis-Digital](docs/images/mobile-ticket.jpg)
+<td align="center">
+<img src="docs/images/mobile-ticket.jpg" width="300"/>
+<br/>
+<b>Karcis Digital</b>
+</td>
+</tr>
+</table>
 
 ---
 
