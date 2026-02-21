@@ -455,9 +455,9 @@ class extends Component
     </div>
 
     {{-- TABLE --}}
-    <div class="flex-1 overflow-y-auto px-4 md:px-8 py-4 md:py-6">
+    <div class="flex-1 overflow-y-auto px-4 md:px-8 py-4 md:py-6 scrollbar-hide">
         <div class="bg-surface-dark border border-[#3E4C59] rounded-xl overflow-hidden min-h-[300px]">
-            <div class="overflow-x-auto">
+            <div class="overflow-x-auto ">
             <table class="w-full min-w-[700px]">
                 <thead class="bg-gray-900 sticky top-0 z-10">
                     <tr>

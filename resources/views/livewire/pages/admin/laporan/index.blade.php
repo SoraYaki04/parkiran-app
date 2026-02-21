@@ -323,8 +323,13 @@ class extends Component {
     // Vehicle Type Distribution (for Pie Chart)
     public function getVehicleDistributionProperty()
     {
-        $mulai = Carbon::parse($this->tanggalMulai)->startOfDay();
-        $akhir = Carbon::parse($this->tanggalAkhir)->endOfDay();
+        if ($this->activeTab === 'analytics') {
+            $mulai = Carbon::createFromDate($this->filterYear, $this->filterMonth, 1)->startOfMonth();
+            $akhir = $mulai->copy()->endOfMonth();
+        } else {
+            $mulai = Carbon::parse($this->tanggalMulai)->startOfDay();
+            $akhir = Carbon::parse($this->tanggalAkhir)->endOfDay();
+        }
 
         $distribution = ParkirSessions::whereBetween('confirmed_at', [$mulai, $akhir])
             ->where('status', 'finished')

@@ -91,7 +91,7 @@ class extends Component {
 };
 ?>
 
-<div class="flex-1 flex flex-col h-full">
+<div class="flex-1 flex flex-col h-full overflow-hidden">
     <div class="max-w-[1280px] mx-auto p-4 md:p-8 flex flex-col h-full">
 
         {{-- HEADER --}}
@@ -194,7 +194,7 @@ class extends Component {
                     str_contains($log->action, 'BACKUP') || str_contains($log->action, 'RESTORE') => 'bg-violet-400 text-violet-950',
                     default => 'bg-primary text-black',
                 };
-                $hasChanges = $log->old_values || $log->new_values;
+                $hasDetail = $log->old_values || $log->new_values || $log->user_agent;
                 @endphp
 
                 <div x-data="{ expanded: false }"
@@ -250,7 +250,7 @@ class extends Component {
                              </button>
                         @endif
 
-                        @if($hasChanges)
+                        @if($hasDetail)
                             <button @click="expanded = !expanded"
                                 class="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider transition-all px-2 py-1 rounded-lg"
                                 :class="expanded ? 'text-primary bg-primary/10' : 'text-slate-500 hover:text-primary'">
@@ -262,7 +262,7 @@ class extends Component {
                     </div>
 
                     {{-- Expandable Detail --}}
-                    @if($hasChanges)
+                    @if($hasDetail)
                     <div x-show="expanded" x-collapse x-cloak class="space-y-3 pt-2">
                         @if($log->old_values)
                         <div>
@@ -372,7 +372,7 @@ class extends Component {
                     str_contains($log->action, 'BACKUP') || str_contains($log->action, 'RESTORE') => 'bg-violet-400 text-violet-950',
                     default => 'bg-primary text-black',
                     };
-                    $hasChanges = $log->old_values || $log->new_values;
+                    $hasDetail = $log->old_values || $log->new_values || $log->user_agent;
                     @endphp
                     <tbody class="divide-y divide-[#3E4C59]" x-data="{ expanded: false }">
                         <tr class="hover:bg-surface-hover transition-colors group">
@@ -448,7 +448,7 @@ class extends Component {
                             </td>
 
                             <td class="px-6 py-4 text-center">
-                                @if($hasChanges)
+                                @if($hasDetail)
                                     <button @click="expanded = !expanded"
                                         class="p-1.5 rounded-lg hover:bg-primary/10 text-slate-400 hover:text-primary transition-all"
                                         :class="expanded ? 'bg-primary/10 text-primary' : ''">
@@ -462,7 +462,7 @@ class extends Component {
                         </tr>
 
                         {{-- EXPANDABLE DETAIL ROW --}}
-                        @if($hasChanges)
+                        @if($hasDetail)
                         <tr x-show="expanded" x-transition.duration.200ms x-cloak>
                             <td colspan="7" class="px-6 py-4 bg-gray-900/40">
                                 <div class="grid grid-cols-2 gap-4 max-w-4xl">
