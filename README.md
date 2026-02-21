@@ -5,6 +5,42 @@ Aplikasi ini dirancang untuk menyederhanakan operasional parkir, mulai dari penc
 
 ---
 
+
+# 🖥️ Tampilan Website
+
+Berikut adalah beberapa tampilan utama dari aplikasi **Parkiran App**:
+
+## 📊 Dashboard
+Menampilkan ringkasan data parkir, grafik pendapatan, dan statistik kendaraan secara real-time.
+
+![Dashboard](docs/images/dashboard.png)
+
+---
+
+## 🚗 Transaksi Parkir (Check-in / Check-out)
+Halaman operasional untuk mencatat kendaraan masuk dan keluar dengan sistem QR Code.
+
+![Transaksi](docs/images/transaction.png)
+
+---
+
+## 📈 Laporan & Analitik
+Menampilkan laporan pendapatan harian, bulanan, serta fitur export ke PDF & Excel.
+
+![Laporan](docs/images/report.png)
+
+---
+
+## 📱 Pilih Slot dan Karcis Digital (Mobile)
+Aplikasi juga dapat diakses melalui smartphone dalam satu jaringan WiFi.
+
+![Pilih-Slot](docs/images/mobile-slot.jpg)
+
+![Karcis-Digital](docs/images/mobile-ticket.jpg)
+
+---
+
+
 ## 🚀 Fitur Utama
 
 ### 🚗 Manajemen Operasional
