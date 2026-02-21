@@ -6,7 +6,8 @@ Aplikasi ini dirancang untuk menyederhanakan operasional parkir, mulai dari penc
 ---
 
 
-# 🖥️ Tampilan Website
+
+# 🖥️ Tampilan 
 
 Berikut adalah beberapa tampilan utama dari aplikasi **Parkiran App**:
 
