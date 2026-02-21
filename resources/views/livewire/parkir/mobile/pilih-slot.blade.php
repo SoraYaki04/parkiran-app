@@ -55,6 +55,11 @@
                                     <span class="material-symbols-outlined text-slate-600">transportation</span>
                                 </div>
                             </div>
+                            @error('platNomor')
+                                <p class="text-red-500 text-xs mt-2 font-semibold">
+                                    Format plat tidak sesuai.
+                                </p>
+                            @enderror
                         </div>
         
                         {{-- LEGEND --}}
@@ -197,6 +202,18 @@
                                     </div>
                                 </div>
             
+                                @error('slotId')
+                                    <p class="text-red-500 text-xs mb-2 font-semibold">
+                                        {{ $message }}
+                                    </p>
+                                @enderror
+
+                                @error('selectedAreaId')
+                                    <p class="text-red-500 text-xs mb-2 font-semibold">
+                                        {{ $message }}
+                                    </p>
+                                @enderror
+
                                 <button
                                     wire:click="confirm"
                                     @disabled(!$slotId || !$platNomor)
@@ -243,7 +260,7 @@
         if(depan.length > 0) {
             while(i < value.length && nomor.length < 4 && /[0-9]/.test(value[i])) {
                 nomor += value[i];
-                i++;=
+                i++;
             }
         }
 

@@ -25,6 +25,25 @@ class PilihSlot extends Component
     public bool $invalidSession = false;
     public string $errorMessage = '';
 
+
+    protected function rules()
+    {
+        return [
+            'selectedAreaId' => 'required|exists:area_parkir,id',
+            'slotId'         => 'required|exists:slot_parkir,id',
+            'platNomor'      => 'required|min:4|max:15',
+        ];
+    }
+
+    protected function messages()
+    {
+        return [
+            'selectedAreaId.required' => 'Area belum dipilih',
+            'slotId.required'         => 'Slot belum dipilih',
+            'platNomor.required'      => 'Plat nomor wajib diisi',
+        ];
+    }
+
     /* =====================
         MOUNT
     ===================== */
@@ -108,41 +127,60 @@ class PilihSlot extends Component
 
     /* =====================
         NORMALISASI PLAT
-        hasil: "AG 1353 KDT"
     ===================== */
-    private function normalizePlat(string $input): string
-    {
-        $input = strtoupper(trim($input));
-        $input = preg_replace('/[^A-Z0-9]/', '', $input);
+private function normalizePlat(string $input): string
+{
+    $input = strtoupper(trim($input));
 
-        if (! preg_match('/^([A-Z]{1,2})(\d{1,5})([A-Z]{0,3})$/', $input, $m)) {
-            throw new \Exception('Format plat tidak valid');
-        }
+    // Hapus semua selain huruf dan angka
+    $clean = preg_replace('/[^A-Z0-9]/', '', $input);
 
-        return trim($m[1] . ' ' . $m[2] . ' ' . ($m[3] ?? ''));
+    if (! preg_match('/^[A-Z]{1,2}\d{1,4}[A-Z]{0,3}$/', $clean)) {
+        throw new \Exception('Format plat harus seperti: B 1234 ABC');
     }
 
+    preg_match('/^([A-Z]{1,2})(\d{1,4})([A-Z]{0,3})$/', $clean, $m);
+
+    $depan  = $m[1];
+    $angka  = $m[2];
+    $belakang = $m[3] ?? '';
+
+    return trim($depan . ' ' . $angka . ' ' . $belakang);
+}
     /* =====================
         KONFIRMASI
     ===================== */
     public function confirm()
     {
-        if (! $this->selectedAreaId || ! $this->slotId || ! $this->platNomor) {
-            $this->errorMessage = 'Data belum lengkap';
-            return;
-        }
+        $this->resetErrorBag();
 
+        // 1️⃣ Validasi basic dulu
+        $this->validate();
+
+        // 2️⃣ Validasi format plat via normalizer
         try {
             $platFormatted = $this->normalizePlat($this->platNomor);
         } catch (\Exception $e) {
-            $this->errorMessage = $e->getMessage();
+            $this->addError('platNomor', $e->getMessage());
             return;
         }
 
-        // 🚫 CEK BLACKLIST
+        // 3️⃣ Cek blacklist kendaraan
         $existingVehicle = Kendaraan::where('plat_nomor', $platFormatted)->first();
+
         if ($existingVehicle && $existingVehicle->status === 'nonaktif') {
-            $this->errorMessage = 'Kendaraan diblacklist';
+            $this->addError('platNomor', 'Kendaraan diblacklist');
+            return;
+        }
+
+        // 4️⃣ Pastikan slot masih kosong (double protection)
+        $slotExists = SlotParkir::where('id', $this->slotId)
+            ->where('area_id', $this->selectedAreaId)
+            ->where('status', 'kosong')
+            ->exists();
+
+        if (! $slotExists) {
+            $this->addError('slotId', 'Slot sudah terisi atau tidak valid');
             return;
         }
 
@@ -150,9 +188,6 @@ class PilihSlot extends Component
 
         DB::transaction(function () use ($exitToken, $platFormatted) {
 
-            /**
-             * 🔐 LOCK SLOT
-             */
             $slot = SlotParkir::where('id', $this->slotId)
                 ->where('area_id', $this->selectedAreaId)
                 ->where('status', 'kosong')
@@ -165,6 +200,7 @@ class PilihSlot extends Component
                 [
                     'tipe_kendaraan_id' => $this->session->tipe_kendaraan_id,
                     'slot_parkir_id'    => $slot->id,
+                    'status'            => 'aktif',
                 ]
             );
 
@@ -177,7 +213,6 @@ class PilihSlot extends Component
                 'exit_token'     => $exitToken,
             ]);
 
-            // Tandai slot terisi
             $slot->update(['status' => 'terisi']);
         });
 
