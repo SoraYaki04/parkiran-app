@@ -1,112 +1,260 @@
-# Parkiran App - Sistem Manajemen Parkir Modern
+# 🚗 Parkiran App - Sistem Manajemen Parkir Modern
 
-Sebuah solusi manajemen parkir yang efisien dan modern, dibangun menggunakan kekuatan **Laravel 10** dan **Livewire 3**. Aplikasi ini dirancang untuk menyederhanakan operasional parkir, mulai dari pencatatan masuk/keluar kendaraan, pengelolaan slot, hingga pelaporan keuangan yang akurat.
+Sebuah solusi manajemen parkir yang efisien dan modern, dibangun menggunakan **Laravel 10** dan **Livewire 3**.  
+Aplikasi ini dirancang untuk menyederhanakan operasional parkir, mulai dari pencatatan masuk/keluar kendaraan, pengelolaan slot, hingga pelaporan keuangan yang akurat.
+
+---
+
+
+# 🖥️ Tampilan Website
+
+Berikut adalah beberapa tampilan utama dari aplikasi **Parkiran App**:
+
+## 📊 Dashboard
+Menampilkan ringkasan data parkir, grafik pendapatan, dan statistik kendaraan secara real-time.
+
+![Dashboard](docs/images/dashboard.png)
+
+---
+
+## 🚗 Transaksi Parkir (Check-in / Check-out)
+Halaman operasional untuk mencatat kendaraan masuk dan keluar dengan sistem QR Code.
+
+![Transaksi](docs/images/transaction.png)
+
+---
+
+## 📈 Laporan & Analitik
+Menampilkan laporan pendapatan harian, bulanan, serta fitur export ke PDF & Excel.
+
+![Laporan](docs/images/report.png)
+
+---
+
+## 📱 Pilih Slot dan Karcis Digital (Mobile)
+Aplikasi juga dapat diakses melalui smartphone dalam satu jaringan WiFi.
+
+![Pilih-Slot](docs/images/mobile-slot.jpg)
+
+![Karcis-Digital](docs/images/mobile-ticket.jpg)
+
+---
+
 
 ## 🚀 Fitur Utama
 
 ### 🚗 Manajemen Operasional
-- **Check-in & Check-out Cepat**: Proses masuk dan keluar kendaraan yang efisien.
-- **QR Code Integration**: Scan QR Code untuk tiket parkir guna mempercepat transaksi.
-- **Real-time Slot Monitoring**: Pemantau ketersediaan slot parkir secara langsung.
-- **Dukungan Berbagai Kendaraan**: Kategori tarif untuk Motor, Mobil, dll.
+- Check-in & Check-out Cepat
+- QR Code Integration untuk tiket parkir
+- Real-time Slot Monitoring
+- Dukungan berbagai kategori kendaraan (Motor, Mobil, dll)
 
 ### 👥 Hak Akses & Keamanan (Role-Based Access Control)
-- **Admin**: Akses penuh ke seluruh pengaturan sistem, manajemen user, dan konfigurasi tarif.
-- **Petugas**: Fokus pada operasional harian (transaksi parkir).
-- **Owner**: Akses khusus untuk memantau laporan pendapatan dan statistik tanpa mengubah data operasional.
+- **Admin** → Akses penuh sistem
+- **Petugas** → Operasional transaksi parkir
+- **Owner** → Monitoring laporan & statistik
 
 ### 📊 Laporan & Analitik
-- **Dashboard Interaktif**: Grafik pendapatan harian/bulanan dan statistik kendaraan.
-- **Laporan Keuangan**: Rekapitulasi pendapatan yang detail.
-- **Ekspor Data**: Dukungan ekspor laporan ke format **PDF** dan **Excel**.
+- Dashboard Interaktif
+- Grafik pendapatan harian/bulanan
+- Laporan keuangan detail
+- Export PDF & Excel
 
 ### 🛠️ Fitur Tambahan
-- **Backup Database**: Fitur bawaan untuk mengamankan data sistem.
-- **Cetak Struk**: Integrasi pencetakan tiket parkir.
+- Backup Database
+- Cetak Struk Parkir
+- QR Code Generator
+
+---
 
 ## 💻 Teknologi yang Digunakan
 
-- **Backend Framework**: [Laravel 10](https://laravel.com)
-- **Full-Stack Framework**: [Livewire 3](https://livewire.laravel.com)
-- **Styling**: [Tailwind CSS](https://tailwindcss.com)
-- **Database**: MySQL
-- **Build Tool**: [Vite](https://vitejs.dev)
-- **Library Pendukung**:
-  - `barryvdh/laravel-dompdf` (PDF Export)
-  - `maatwebsite/excel` (Excel Export)
-  - `endroid/qr-code` (QR Code Generator)
-  - `spatie/laravel-backup` (System Backup)
+- Laravel 10
+- Livewire 3
+- Tailwind CSS
+- MySQL
+- Vite
+
+### Library Pendukung
+- barryvdh/laravel-dompdf (Export PDF)
+- maatwebsite/excel (Export Excel)
+- endroid/qr-code (QR Generator)
+- spatie/laravel-backup (Backup System)
+
+---
 
 ## 📋 Prasyarat Sistem
 
-Sebelum memulai, pastikan sistem Anda memenuhi kebutuhan berikut:
-- **PHP**: ^8.1
-- **Composer**
-- **Node.js** & **NPM**
-- **MySQL Database**
+Pastikan sistem Anda memiliki:
+
+- PHP ^8.1
+- Composer
+- Node.js & NPM
+- MySQL Database
+
+---
 
 ## ⚙️ Cara Instalasi
 
-Ikuti langkah-langkah berikut untuk menjalankan proyek ini di komputer lokal Anda:
+### 1️⃣ Clone Repository
 
-1.  **Clone Repositori**
-    ```bash
-    git clone https://github.com/username/parkiran-app.git
-    cd parkiran-app
-    ```
+```bash
+git clone https://github.com/SoraYaki04/parkiran-app.git
+cd parkiran-app
+```
 
-2.  **Install Dependencies**
-    Install paket PHP dan JavaScript yang dibutuhkan.
-    ```bash
-    composer install
-    npm install
-    ```
+### 2️⃣ Install Dependencies
 
-3.  **Konfigurasi Environment**
-    Salin file contoh konfigurasi `.env`.
-    ```bash
-    cp .env.example .env
-    ```
-    Buka file `.env` dan sesuaikan pengaturan database Anda (DB_DATABASE, DB_USERNAME, DB_PASSWORD).
+```bash
+composer install
+npm install
+```
 
-4.  **Generate Key Aplikasi**
-    ```bash
-    php artisan key:generate
-    ```
+### 3️⃣ Konfigurasi Environment
 
-5.  **Setup Database**
-    Jalankan migrasi untuk membuat tabel dan seeder untuk data awal (User admin, setting awal, dll).
-    ```bash
-    php artisan migrate --seed
-    ```
+```bash
+cp .env.example .env
+```
 
-6.  **Setup Storage**
-    Tautkan folder storage agar file publik dapat diakses.
-    ```bash
-    php artisan storage:link
-    ```
+Edit file `.env` dan sesuaikan:
 
-7.  **Build Assets**
-    Compile asset CSS dan JS.
-    ```bash
-    npm run build
-    ```
+```env
+DB_DATABASE=nama_database
+DB_USERNAME=root
+DB_PASSWORD=
+```
 
-8.  **Jalankan Server**
-    ```bash
-    php artisan serve
-    ```
+---
 
-    Akses aplikasi melalui browser di: `http://localhost:8000`
+### 4️⃣ Generate Key
 
-## 🔐 Akun Demo (Jika Menggunakan Seeder)
+```bash
+php artisan key:generate
+```
 
-Jika Anda menjalankan `php artisan migrate --seed`, silakan gunakan akun berikut untuk login:
+---
 
-- **Admin**: `admin` / `admin123`
-- **Petugas**: `petugas` / `petugas123`
-- **Owner**: `owner` / `owner123`
+### 5️⃣ Setup Database
+
+```bash
+php artisan migrate --seed
+```
+
+---
+
+### 6️⃣ Setup Storage
+
+```bash
+php artisan storage:link
+```
+
+---
+
+### 7️⃣ Build Assets
+
+```bash
+npm run build
+```
+
+---
+
+### 8️⃣ Jalankan Server
+
+```bash
+php artisan serve
+```
+
+Akses di browser:
+
+```
+http://localhost:8000
+```
+
+---
+
+## 🔐 Akun Demo (Seeder)
+
+Jika menggunakan seeder:
+
+| Role     | Username | Password     |
+|----------|----------|--------------|
+| Admin    | admin    | admin123     |
+| Petugas  | petugas  | petugas123   |
+| Owner    | owner    | owner123     |
+
+---
+
+# 📱 Akses Aplikasi dari HP (Satu WiFi)
+
+Jika ingin testing menggunakan HP dalam jaringan WiFi yang sama:
+
+---
+
+## 1️⃣ Ganti IP di `.env`
+
+```env
+APP_URL=http://192.168.1.10:8000
+```
+
+> Ganti IP sesuai IP lokal komputer Anda  
+> Cek dengan:
+> - Windows → `ipconfig`
+> - Mac/Linux → `ifconfig`
+
+---
+
+## 2️⃣ Edit `vite.config.js`
+
+```js
+import { defineConfig } from 'vite'
+import laravel from 'laravel-vite-plugin'
+
+export default defineConfig({
+    plugins: [
+        laravel({
+            input: ['resources/css/app.css', 'resources/js/app.js'],
+            refresh: true,
+        }),
+    ],
+    server: {
+        host: '0.0.0.0',
+        port: 5173,
+        hmr: {
+            host: '192.168.1.10',
+        },
+    },
+})
+```
+
+---
+
+## 3️⃣ Jalankan Server dengan Host Terbuka
+
+```bash
+php artisan serve --host=0.0.0.0 --port=8000
+npm run dev
+php artisan schedule:work
+```
+
+---
+
+## 4️⃣ Akses dari HP
+
+Buka browser HP dan akses:
+
+```
+http://192.168.1.10:8000
+```
+
+---
+
+### ⚠️ Pastikan
+
+- HP dan komputer berada di WiFi yang sama
+- Firewall tidak memblokir port 8000 dan 5173
+
+---
 
 ## 📄 Lisensi
 
-Project ini dilisensikan di bawah [MIT License](LICENSE).
+Project ini menggunakan MIT License.
