@@ -40,7 +40,7 @@ class extends Component
 
     public function getTodayRevenueProperty()
     {
-        return TransaksiParkir::whereDate('waktu_masuk', Carbon::today())
+        return TransaksiParkir::whereDate('waktu_keluar', Carbon::today())
                 ->sum('total_bayar');
     }
 
